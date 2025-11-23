@@ -262,8 +262,8 @@ public class Filter<T> implements Specification<T> {
 
             return switch (operation) {
                 case EQUALS_IGNORE_CASE -> parseEqualIgnoreCasePredicate(cb, selection, value.toString());
-                case IS -> parseIsPredicate(cb, selection,function, Is.parse(value.toString()));
-                case IS_NOT -> cb.not(parseIsPredicate(cb, selection,function, Is.parse(value.toString())));
+                case IS -> parseIsPredicate(cb, selection, function, Is.parse(value.toString()));
+                case IS_NOT -> cb.not(parseIsPredicate(cb, selection, function, Is.parse(value.toString())));
                 case EQUALS -> parseEqualPredicate(cb, selection, reflectionField, value, function, field);
                 case GT, LS, GTE, LSE ->
                         parseComparisonPredicate(cb, selection, operation, reflectionField, value, function, field);
@@ -299,62 +299,6 @@ public class Filter<T> implements Specification<T> {
         return reflectionField != null ? reflectionField.getType() : null;
     }
 
-    private static <T> Expression<?> getSelectExpression(Root<T> root, String field, CriteriaBuilder cb) {
-        if (!field.startsWith("concat")) {
-            return field.contains(".") ? getNestedPath(root, field) : root.get(field);
-        }
-        Matcher concatMatcher = CONCAT_FUNCTION_PATTERN.matcher(field);
-        if (!concatMatcher.matches()) {
-            throw new InvalidParameterException("Невалидный синтаксис операции concat: " + field);
-        }
-        String[] concatValues = concatMatcher.group(1).split(",");
-        List<Expression<?>> concatExpressions = new ArrayList<>();
-        for (String concatValue : concatValues) {
-
-            String trimmedValue = concatValue.trim();
-            //string literal case
-            if (concatValue.startsWith("'") && concatValue.endsWith("'")) {
-                String literalValue = trimmedValue.substring(1, trimmedValue.length() - 1);
-                concatExpressions.add(cb.literal(literalValue));
-                continue;
-            }
-
-            Matcher toCharMatcher = TO_CHAR_FUNCTION_PATTERN.matcher(trimmedValue);
-            if (toCharMatcher.matches()) {
-                String path = toCharMatcher.group(1);
-                String format = toCharMatcher.group(2);
-                concatExpressions.add(cb.function(
-                        "TO_CHAR",
-                        String.class,
-                        getSelectExpression(root, path, cb),
-                        cb.literal(format)
-                ));
-            } else {
-                concatExpressions.add(getSelectExpression(root, trimmedValue, cb));
-            }
-
-        }
-
-        return concateExpressions(cb, concatExpressions);
-    }
-
-    private static Expression<String> concateExpressions(CriteriaBuilder cb, List<Expression<?>> expressions) {
-        if (expressions == null || expressions.isEmpty()) {
-            return cb.literal("");
-        }
-
-        Expression<String> result = null;
-
-        for (Expression<?> expr : expressions) {
-            if (result == null) {
-                result = convertToString(cb, expr);
-            } else {
-                result = cb.concat(result, convertToString(cb, expr));
-            }
-        }
-
-        return result;
-    }
 
     private static Expression<String> convertToString(CriteriaBuilder cb, Expression<?> expression) {
         if (expression.getJavaType() == String.class) {
@@ -390,11 +334,22 @@ public class Filter<T> implements Specification<T> {
             return cb.or(predicates.toArray(new Predicate[0]));
         }
         // Для обычных полей
-        Class<?> fieldType = field.startsWith("concat") ? String.class : getFieldType(field, reflectionField, function);
+        Class<?> fieldType = defineValueType(selection, field, reflectionField, function);
         Object[] values = inValues.stream()
                 .map(v -> convertValue(v, fieldType))
                 .toArray();
         return selection.in(values);
+    }
+
+    public static Class<?> defineValueType(Expression<?> selection, String fieldName, Field reflectionField, Function function) {
+        Class<?> result;
+        if (reflectionField != null) {
+            result = getFieldType(fieldName, reflectionField, function);
+            if (result != null) {
+                return result;
+            }
+        }
+        return selection.getJavaType();
     }
 
     public static Class<?> getCollectionElementType(Field field) {
@@ -565,7 +520,8 @@ public class Filter<T> implements Specification<T> {
                 return switch (function) {
                     case LENGTH, SIZE ->
                             getComparisonPredicate(cb, operation, comparablePath, (Long) convertValue(value, Long.class));
-                    case IS_EMPTY, IS_NOT_EMPTY -> throw new IllegalStateException("Невозможно применить операцию сравнения с функциями isEmpty()/isNotEmpty()");
+                    case IS_EMPTY, IS_NOT_EMPTY ->
+                            throw new IllegalStateException("Невозможно применить операцию сравнения с функциями isEmpty()/isNotEmpty()");
                 };
             }
 

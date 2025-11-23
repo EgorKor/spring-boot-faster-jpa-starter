@@ -52,7 +52,7 @@ public class AutoConfigurationSource {
     }
 
 
-
+    @ConditionalOnMissingBean(PersistenceExceptionTranslationPostProcessor.class)
     @Role(value = BeanDefinition.ROLE_INFRASTRUCTURE)
     @Bean
     public PersistenceExceptionTranslationPostProcessor persistenceExceptionTranslationPostProcessor() {
