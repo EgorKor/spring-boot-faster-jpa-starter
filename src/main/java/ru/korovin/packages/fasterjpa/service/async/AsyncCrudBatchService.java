@@ -1,0 +1,61 @@
+package ru.korovin.packages.fasterjpa.service.async;
+
+import ru.korovin.packages.fasterjpa.service.batching.BatchResultWithData;
+
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * @author EgorKor
+ * @version 1.0
+ * @since 2025
+ */
+public interface AsyncCrudBatchService<T, ID> extends AsyncCrudService<T, ID> {
+    /**
+     * Асинхронное пакетное сохранение, выполняется не атомарно, при провале
+     * одной операции, выполнение продолжается
+     */
+    CompletableFuture<List<BatchResultWithData<T>>> batchCreateAsync(List<T> models);
+
+    /**
+     * Асинхронное пакетное удаление, выполняется не атомарно, при провале
+     * одной операции, выполнение продолжается
+     */
+    CompletableFuture<List<BatchResultWithData<ID>>> batchDeleteAsync(List<ID> ids);
+
+    /**
+     * Асинхронное атомарное сохранение, при провале одной операции
+     * выполнение прерывается, транзакция откатывается
+     */
+    CompletableFuture<List<T>> batchCreateAtomicAsync(List<T> models);
+
+    /**
+     * Асинхронное атомарное удаление, при провале одной операции
+     * выполнение прерывается, транзакция откатывается
+     */
+    CompletableFuture<Void> batchDeleteAtomicAsync(List<ID> ids);
+
+    /**
+     * Асинхронное пакетное сохранение, выполняется не атомарно, при провале
+     * одной операции, выполнение продолжается
+     */
+    CompletableFuture<List<BatchResultWithData<T>>> batchCreateAsync(List<T> models, int batchSize);
+
+    /**
+     * Асинхронное пакетное удаление, выполняется не атомарно, при провале
+     * одной операции, выполнение продолжается
+     */
+    CompletableFuture<List<BatchResultWithData<ID>>> batchDeleteAsync(List<ID> ids, int batchSize);
+
+    /**
+     * Асинхронное атомарное сохранение, при провале одной операции
+     * выполнение прерывается, транзакция откатывается
+     */
+    CompletableFuture<List<T>> batchCreateAtomicAsync(List<T> models, int batchSize);
+
+    /**
+     * Асинхронное атомарное удаление, при провале одной операции
+     * выполнение прерывается, транзакция откатывается
+     */
+    CompletableFuture<Void> batchDeleteAtomicAsync(List<ID> ids, int batchSize);
+}

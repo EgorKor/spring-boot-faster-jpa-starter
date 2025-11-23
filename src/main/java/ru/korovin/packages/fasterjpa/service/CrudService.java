@@ -1,0 +1,345 @@
+package ru.korovin.packages.fasterjpa.service;
+
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.NonUniqueResultException;
+import ru.korovin.packages.fasterjpa.exception.EntityProcessingException;
+import ru.korovin.packages.fasterjpa.exception.ResourceNotFoundException;
+import ru.korovin.packages.fasterjpa.exception.SoftDeleteUnsupportedException;
+import ru.korovin.packages.fasterjpa.queryparam.Filter;
+import ru.korovin.packages.fasterjpa.queryparam.Pagination;
+import ru.korovin.packages.fasterjpa.queryparam.Sorting;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
+
+/**
+ * Интерфейс базового CRUD параметризованного сервиса
+ * <p>
+ * Методы
+ *     <ul>
+ *         <li>{@link #getPage(Filter, Sorting, Pagination)}</li>
+ *         <li>{@link #getById(ID)}</li>
+ *         <li>{@link #getById(ID, LockModeType)}</li>
+ *         <li>{@link #getByFilter(Filter)}</li>
+ *         <li>{@link #getByFilterWithLock(Filter, LockModeType)}</li>
+ *         <li>{@link #create(T)}</li>
+ *         <li>{@link #fullUpdate(T)}</li>
+ *         <li>{@link #patchUpdate(ID, T)}</li>
+ *         <li>{@link #deleteAll()}</li>
+ *         <li>{@link #deleteById(ID)}</li>
+ *         <li>{@link #deleteByFilter(Filter)}</li>
+ *         <li>{@link #countAll()}</li>
+ *         <li>{@link #countByFilter(Filter)}</li>
+ *         <li>{@link #existsById(ID)}</li>
+ *         <li>{@link #existsByFilter(Filter)}</li>
+ *         <li>{@link #softDeleteById(ID)}</li>
+ *         <li>{@link #softDeleteByFilter(Filter)}</li>
+ *         <li>{@link #softDeleteAll()}</li>
+ *         <li>{@link #restoreById(ID)}</li>
+ *         <li>{@link #restoreByFilter(Filter)}</li>
+ *         <li>{@link #restoreAll()}</li>
+ *     </ul>
+ * </p>
+ *
+ * @author EgorKor
+ * @version 1.0
+ * @since 2025
+ */
+public interface CrudService<T, ID> {
+    /**
+     * Запрос на получение страницы сущностей с учётом фильтрации, сортировки, пагинации
+     *
+     * @param sorting    параметр запроса сортировки
+     * @param filter     параметр запроса фильтрации
+     * @param pagination параметр запроса постраничного доступа
+     * @return PageableResult - результат постраничного запроса к БД, содержащий данные
+     * и параметры страниц
+     */
+    PageableResult<T> getPage(Filter<T> filter, Sorting sorting, Pagination pagination);
+
+    /**
+     * Запрос на получение страницы сущностей с учётом фильтрации и пагинации
+     *
+     * @param filter     параметр запроса фильтрации
+     * @param pagination параметр запроса постраничного доступа
+     * @return PageableResult - результат постраничного запроса к БД, содержащий данные
+     * и параметры страниц
+     */
+    PageableResult<T> getPage(Filter<T> filter, Pagination pagination);
+
+    /**
+     * Запрос на получение полного списка сущностей
+     *
+     * @return List типа T - результат запроса к БД, содержащий данные
+     */
+    List<T> getList();
+
+    /**
+     * Запрос на получение списка сущностей с учётом фильтрации
+     *
+     * @param filter параметр запроса фильтрации
+     * @return List типа T - результат запроса к БД, содержащий данные
+     */
+    List<T> getList(Filter<T> filter);
+
+    /**
+     * Запрос на получение списка сущностей с учётом фильтрации и сортировки
+     *
+     * @param sorting параметр запроса сортировки
+     * @param filter  параметр запроса фильтрации
+     * @return List типа T - результат запроса к БД, содержащий данные
+     */
+    List<T> getList(Filter<T> filter, Sorting sorting);
+
+    /**
+     * Запрос на получение потока данных
+     *
+     * @return Stream типа T - поток данных сущностей из БД
+     */
+    Stream<T> getDataStream();
+
+    /**
+     * Запрос на получение потока данных с учётом фильтрации.
+     * В потоке запрашиваются все данные, но выгрузка происходит
+     * частично, в отличие от методов getAll - которые выгружают
+     * сразу весь список. Рекомендуется использовать его при обработке
+     * больших объемов данных.
+     *
+     * @param filter параметр запроса фильтрации
+     * @return Stream типа T - поток данных сущностей из БД
+     */
+    Stream<T> getDataStream(Filter<T> filter);
+
+    /**
+     * Запрос на получение потока данных с учётом фильтрации
+     * и сортировки
+     *
+     * @param sorting параметр запроса сортировки
+     * @param filter  параметр запроса фильтрации
+     * @return Stream типа T - поток данных сущностей из БД
+     * @see #getDataStream(Filter)
+     */
+    Stream<T> getDataStream(Filter<T> filter, Sorting sorting);
+
+    /**
+     * Запрос на получение сущности по идентификатору
+     *
+     * @param id идентификатор сущности
+     * @return объект T - сущность найденная по id
+     * @throws ResourceNotFoundException в случае отсутствия в БД сущности с таким id
+     */
+    T getById(ID id) throws ResourceNotFoundException;
+
+
+    Optional<T> findById(ID id);
+
+    /**
+     * Запрос на получение сущности по идентификатору
+     *
+     * @param id идентификатор сущности
+     * @return объект T - сущность найденная по id
+     * @throws ResourceNotFoundException в случае отсутствия в БД сущности с таким id
+     */
+    T getById(ID id, Joins properties) throws ResourceNotFoundException;
+
+    /**
+     * Запрос на получение сущности по идентификатору
+     */
+    Optional<T> findById(ID id, Joins fetchingProperties);
+
+    /**
+     * Запрос на получение сущности по идентификатору с возможностью блокировки
+     * записи на уровне базы данных
+     *
+     * @param id       идентификатор сущности
+     * @param lockType параметр блокировки в БД
+     * @return объект T - сущность найденная по id
+     * @throws ResourceNotFoundException в случае отсутствия в БД сущности с таким id
+     */
+    T getById(ID id, LockModeType lockType) throws ResourceNotFoundException;
+
+    Optional<T> findById(ID id, LockModeType lockType);
+
+    T getById(ID id, LockModeType lockType, Joins properties) throws ResourceNotFoundException;
+
+    Optional<T> findById(ID id, LockModeType lockType, Joins fetchingProperties);
+
+    /**
+     * Запрос на получение одной сущности с применением условий из фильтра.
+     * Находимая сущность по данному фильтру должна быть уникальна
+     *
+     * @param filter параметр запроса фильтрации
+     * @return объект Т - удовлетворяющий условиям из фильтра
+     * @throws ResourceNotFoundException в случае отсутствия в БД сущности удовлетворяющий
+     *                                   условиям из фильтра
+     */
+    T getByFilter(Filter<T> filter) throws ResourceNotFoundException, NonUniqueResultException;
+
+    Optional<T> findByFilter(Filter<T> filter);
+
+    /**
+     * Запрос на получение одной сущности с применением условий из фильтра
+     * с возможностью блокировки записи на уровне базы данных
+     *
+     * @param filter   параметр запроса фильтрации
+     * @param lockType параметр блокировки в БД
+     * @return объект Т - удовлетворяющий условиям из фильтра
+     * @throws ResourceNotFoundException в случае отсутствия в БД сущности удовлетворяющий
+     *                                   условиям из фильтра
+     */
+    T getByFilterWithLock(Filter<T> filter, LockModeType lockType) throws ResourceNotFoundException;
+
+    Optional<T> findByFilterWithLock(Filter<T> filter, LockModeType lockType);
+
+    /**
+     * Создание (POST) сущности в БД
+     *
+     * @return объект сущности после сохранения в БД - модифицированный
+     */
+    T create(T model) throws EntityProcessingException;
+
+    /**
+     * Создание (POST) списка сущностей в БД
+     *
+     * @return список объектов сущностей после сохранение в БД - новый
+     */
+    List<T> createAll(List<T> models) throws EntityProcessingException;
+
+    /**
+     * Полное (PUT) обновление сущности на основе переданной модели, переписывает все поля оригинальной сущности
+     *
+     * @param model объект сущности
+     * @return объект сущности после обновления в БД
+     */
+    T fullUpdate(T model) throws EntityProcessingException;
+
+    /**
+     * Частичное (PATCH) обновление сущности на основе переданной модели, обновляет только не null
+     * поля, которые отличаются от оригинальных.
+     *
+     * @param id    идентификатор сущности
+     * @param model объект сущности
+     * @return объект сущности после обновления в БД
+     * @throws ResourceNotFoundException в случае отсутствия в БД сущности с указанным id
+     */
+    T patchUpdate(ID id, T model) throws ResourceNotFoundException, EntityProcessingException;
+
+    /**
+     * Массовое обновление по условию
+     *
+     * @param specification спецификация обновления в которой указан список изменений
+     * @param filter        фильтр записей, которые должны быть обновлены
+     * @return int число записей которые были обновлены
+     */
+    int updateByFilter(UpdateSpecification specification, Filter<T> filter);
+
+    /**
+     * Физическое удаление сущности по ID
+     *
+     * @param id идентификатор сущности
+     */
+    void deleteById(ID id) throws ResourceNotFoundException, EntityProcessingException;
+
+    /**
+     * Физическое удаление всех сущностей
+     *
+     * @return
+     */
+    long deleteAll() throws EntityProcessingException;
+
+    /**
+     * Физическое удаление всех сущностей с учётом фильтрации
+     *
+     * @param filter параметр запроса фильтрации
+     * @return
+     */
+    long deleteByFilter(Filter<T> filter) throws EntityProcessingException;
+
+    /**
+     * Кол-во сущностей с учётом фильтрации
+     *
+     * @param filter параметр запроса фильтрации
+     * @return общее кол-во сущностей в БД удовлетворяющих условиям фильтра
+     */
+    long countByFilter(Filter<T> filter);
+
+    /**
+     * Кол-во сущностей
+     *
+     * @return общее кол-во сущностей в БД
+     */
+    long countAll();
+
+    /**
+     * Проверка существования сущности по ID
+     *
+     * @param id идентификатор сущности
+     * @return true - если сущность существует с указанным id
+     */
+    boolean existsById(ID id);
+
+    /**
+     * Проверка существования сущности по условию из фильтра
+     *
+     * @param filter - параметр запроса с фильтрацией
+     * @return true - если сущность существует удовлетворяющая условиям фильтра
+     */
+    boolean existsByFilter(Filter<T> filter);
+
+    /**
+     * Мягкое удаление по ID
+     *
+     * @param id идентификатор сущности
+     * @throws ResourceNotFoundException      если сущности с указанным id не существует в БД
+     * @throws SoftDeleteUnsupportedException если сущность не поддерживает мягкое удаление
+     */
+    void softDeleteById(ID id) throws ResourceNotFoundException, SoftDeleteUnsupportedException, EntityProcessingException;
+
+    /**
+     * Мягкое удаление всех сущностей
+     *
+     * @return
+     * @throws SoftDeleteUnsupportedException если сущность не поддерживает мягкое удаление
+     */
+    int softDeleteAll() throws SoftDeleteUnsupportedException, EntityProcessingException;
+
+    /**
+     * Мягкое удаление всех по условию
+     *
+     * @param filter параметр запроса
+     * @return количество обновлений
+     * @throws SoftDeleteUnsupportedException если сущность не поддерживает мягкое удаление
+     */
+    int softDeleteByFilter(Filter<T> filter) throws SoftDeleteUnsupportedException, EntityProcessingException;
+
+    /**
+     * Восстановление после мягкого удаления по ID
+     *
+     * @param id идентификатор сущности
+     * @throws ResourceNotFoundException      если сущности с указанным id не существует в БД
+     * @throws SoftDeleteUnsupportedException если сущность не поддерживает мягкое удаление
+     */
+    void restoreById(ID id) throws ResourceNotFoundException, SoftDeleteUnsupportedException, EntityProcessingException;
+
+    /**
+     * Восстановление всех записей
+     *
+     * @throws SoftDeleteUnsupportedException если сущность не поддерживает мягкое удаление
+     */
+    void restoreAll() throws SoftDeleteUnsupportedException, EntityProcessingException;
+
+    /**
+     * Восстановление всех записей с учётом условий фильтрации
+     *
+     * @throws SoftDeleteUnsupportedException если сущность не поддерживает мягкое удаление
+     */
+    void restoreByFilter(Filter<T> filter) throws SoftDeleteUnsupportedException, EntityProcessingException;
+
+    /**
+     * Получение ссылки на объект БД без загрузки объекта
+     *
+     * @param id идентификатор сущности
+     */
+    T getReference(ID id);
+}

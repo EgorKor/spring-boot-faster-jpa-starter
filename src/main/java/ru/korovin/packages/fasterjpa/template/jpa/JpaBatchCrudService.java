@@ -1,0 +1,200 @@
+package ru.korovin.packages.fasterjpa.template.jpa;
+
+import jakarta.persistence.EntityManager;
+import lombok.experimental.SuperBuilder;
+import ru.korovin.packages.fasterjpa.exception.BatchOperationException;
+import ru.korovin.packages.fasterjpa.exception.ResourceNotFoundException;
+import ru.korovin.packages.fasterjpa.exception.ValidationException;
+import ru.korovin.packages.fasterjpa.service.CrudBatchService;
+import ru.korovin.packages.fasterjpa.service.batching.BatchOperationStatus;
+import ru.korovin.packages.fasterjpa.service.batching.BatchResultWithData;
+import ru.korovin.packages.fasterjpa.template.BatchResultWithDataImpl;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+
+/**
+ * @author EgorKor
+ * @version 1.0
+ * @since 2025
+ */
+@Slf4j
+public class JpaBatchCrudService<T, ID>
+        extends JpaCrudService<T, ID>
+        implements CrudBatchService<T, ID> {
+    private static final int DEFAULT_BATCH_SIZE = 100;
+
+    public JpaBatchCrudService(JpaRepository<T, ID> jpaRepository,
+                               JpaSpecificationExecutor<T> jpaSpecificationExecutor,
+                               EntityManager persistenceContext,
+                               TransactionTemplate transactionTemplate,
+                               Validator validator) {
+        super(jpaRepository, jpaSpecificationExecutor, persistenceContext, transactionTemplate, validator);
+    }
+
+
+    @Override
+    public List<BatchResultWithData<T>> batchCreate(List<T> models) {
+        return batchCreate(models, DEFAULT_BATCH_SIZE);
+    }
+
+    @Override
+    public List<BatchResultWithData<ID>> batchDelete(List<ID> ids) {
+        return batchDelete(ids, DEFAULT_BATCH_SIZE);
+    }
+
+    @Override
+    public List<T> batchCreateAtomic(List<T> models) {
+        return batchCreateAtomic(models, DEFAULT_BATCH_SIZE);
+    }
+
+    @Override
+    public void batchDeleteAtomic(List<ID> ids) {
+        batchDeleteAtomic(ids, DEFAULT_BATCH_SIZE);
+    }
+
+    @Override
+    public List<BatchResultWithData<T>> batchCreate(List<T> models, int batchSize) {
+        return transactionTemplate.execute(status -> {
+            List<BatchResultWithData<T>> results = new ArrayList<>();
+            int counter = 0;
+            for (T model : models) {
+                try {
+                    Set<ConstraintViolation<T>> violations = validator.validate(model);
+                    if (!violations.isEmpty()) {
+                        throw new ValidationException("Ошибка валидации сущности " + getEntityTypeName(),violations);
+                    }
+                    model = repository.save(model);
+                    BatchResultWithDataImpl<T> result = BatchResultWithDataImpl
+                            .<T>builder()
+                            .data(model)
+                            .status(BatchOperationStatus.SUCCESS)
+                            .message("created")
+                            .build();
+                    results.add(result);
+                } catch (Exception e) {
+                    BatchResultWithDataImpl<T> result = BatchResultWithDataImpl
+                            .<T>builder()
+                            .status(BatchOperationStatus.FAILED)
+                            .message("create operation fails for entity: " + model.toString())
+                            .details(e.getMessage())
+                            .build();
+                    results.add(result);
+
+                }
+                if (++counter % batchSize == 0) {
+                    persistenceContext.flush();
+                    persistenceContext.clear();
+                }
+            }
+            persistenceContext.flush();
+            persistenceContext.clear();
+            return results;
+        });
+    }
+
+
+    @Override
+    public List<BatchResultWithData<ID>> batchDelete(List<ID> ids, int batchSize) {
+        return transactionTemplate.execute(status -> {
+            List<BatchResultWithData<ID>> results = new ArrayList<>();
+            int counter = 0;
+            for (ID id : ids) {
+                try {
+                    if (!existsById(id)) {
+                        throw new ResourceNotFoundException(getResourceNotFoundMessage(id));
+                    }
+                    repository.deleteById(id);
+                    persistenceContext.flush();
+                    BatchResultWithDataImpl result = BatchResultWithDataImpl.builder()
+                            .message("deleted")
+                            .data(id)
+                            .status(BatchOperationStatus.SUCCESS)
+                            .build();
+                    results.add(result);
+                } catch (Exception e) {
+                    BatchResultWithDataImpl result = BatchResultWithDataImpl.builder()
+                            .message("delete operation fails for entity with id: " + id.toString())
+                            .status(BatchOperationStatus.FAILED)
+                            .details(e.getMessage())
+                            .build();
+                    results.add(result);
+                }
+                if (++counter % batchSize == 0) {
+                    persistenceContext.flush();
+                    persistenceContext.clear();
+                }
+            }
+            persistenceContext.flush();
+            persistenceContext.clear();
+            return results;
+        });
+    }
+
+    @Override
+    public List<T> batchCreateAtomic(List<T> models, int batchSize) {
+        return transactionTemplate.execute((status) -> {
+            List<T> results = new ArrayList<>();
+            int counter = 0;
+            for (T model : models) {
+                try {
+                    Set<ConstraintViolation<T>> violations = validator.validate(model);
+                    if (!violations.isEmpty()) {
+                        throw new ValidationException("Ошибка валидации сущности " + getEntityTypeName(), violations);
+                    }
+                    model = repository.save(model);
+                    results.add(model);
+                } catch (Exception e) {
+                    log.error("create operation fails for entity: {} \ncause: {}", model.toString(), e.getMessage(), e);
+                    status.setRollbackOnly();
+                    throw new BatchOperationException(e.getMessage());
+                }
+                if (++counter % batchSize == 0) {
+                    persistenceContext.flush();
+                    persistenceContext.clear();
+                }
+            }
+            persistenceContext.flush();
+            persistenceContext.clear();
+            return results;
+        });
+    }
+
+    @Override
+    public void batchDeleteAtomic(List<ID> ids, int batchSize) {
+        transactionTemplate.executeWithoutResult(status -> {
+            int counter = 0;
+            for (ID id : ids) {
+                try {
+                    if (!existsById(id)) {
+                        throw new ResourceNotFoundException(getResourceNotFoundMessage(id));
+                    }
+                    repository.deleteById(id);
+                } catch (Exception e) {
+                    log.error("delete operation fails for entity with id: {} \ncause: {}",
+                            id,
+                            e.getMessage(),
+                            e);
+                    status.setRollbackOnly();
+                    throw new BatchOperationException(e.getMessage());
+                }
+                if (++counter % batchSize == 0) {
+                    persistenceContext.clear();
+                    persistenceContext.flush();
+                }
+            }
+            persistenceContext.flush();
+            persistenceContext.clear();
+        });
+    }
+
+}
