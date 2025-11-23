@@ -23,11 +23,3 @@ jobs:
           TESTCONTAINERS_RYUK_DISABLED: true
           TESTCONTAINERS_CHECKS_DISABLE: true
           DOCKER_HOST: unix:///var/run/docker.sock
-
-      - name: Test Report
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: Maven Tests
-          path: target/surefire-reports/*.xml
-          reporter: java-junit
