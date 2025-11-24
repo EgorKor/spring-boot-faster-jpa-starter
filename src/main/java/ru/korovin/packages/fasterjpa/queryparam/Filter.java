@@ -12,6 +12,7 @@ import ru.korovin.packages.fasterjpa.annotations.ParamCountLimit;
 import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
 import ru.korovin.packages.fasterjpa.queryparam.filterInternal.*;
 import ru.korovin.packages.fasterjpa.queryparam.utils.FieldTypeUtils;
+import ru.korovin.packages.fasterjpa.service.Joins;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -48,8 +49,6 @@ import static ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterOper
 @Getter
 public class Filter<T> implements Specification<T> {
     public static final Pattern FUNCTION_PATTERN = Pattern.compile("(.*)\\.(length\\(\\)|size\\(\\)|isEmpty\\(\\)|isNotEmpty\\(\\))");
-    public static final Pattern CONCAT_FUNCTION_PATTERN = Pattern.compile("concat\\((.*)\\)");
-    public static final Pattern TO_CHAR_FUNCTION_PATTERN = Pattern.compile("to_char\\((.*);'(.*)'\\)");
     public static final DateTimeFormatter DATE_TIME_FORMATTER = new DateTimeFormatterBuilder()
             .appendPattern("yyyy-MM-dd")
             .toFormatter();
@@ -229,6 +228,21 @@ public class Filter<T> implements Specification<T> {
             for (String attribute : attributes) {
                 currentParent = currentParent.fetch(attribute, JoinType.LEFT);
             }
+        });
+        return _this();
+    }
+
+    public <R extends Filter<?>> R withFetchJoins(Joins joins) {
+        this.fetchingProperties.addAll(joins.properties());
+        joins.properties().forEach(fetchingProperty -> {
+            queryConfigurers.add((root) -> {
+                String[] attributes = fetchingProperty.split("\\.");
+                FetchParent<?, ?> currentParent = root;
+
+                for (String attribute : attributes) {
+                    currentParent = currentParent.fetch(attribute, JoinType.LEFT);
+                }
+            });
         });
         return _this();
     }

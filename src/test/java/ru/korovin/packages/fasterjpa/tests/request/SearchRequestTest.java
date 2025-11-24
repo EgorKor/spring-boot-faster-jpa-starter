@@ -29,7 +29,7 @@ public class SearchRequestTest {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add(PAGE_PARAM, "1");
         params.add(PAGE_SIZE_PARAM, "10");
-        SearchRequest searchRequest = new SearchRequest(params);
+        SearchRequest searchRequest = new SearchRequest(params, Filter.class, Sorting.class,Map.of());
         Pagination pagination = searchRequest.getPagination();
         assertNotNull(pagination);
         assertTrue(pagination.isPaged());
@@ -42,7 +42,7 @@ public class SearchRequestTest {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add(SORT_PARAM, "id");
         params.add(SORT_PARAM, "name:desc");
-        SearchRequest searchRequest = new SearchRequest(params);
+        SearchRequest searchRequest = new SearchRequest(params, Filter.class, Sorting.class,Map.of());
         Sorting sorting = searchRequest.getSorting();
         assertIterableEquals(List.of(
                 new SortingUnit("id", "asc"),
@@ -67,7 +67,7 @@ public class SearchRequestTest {
         params.add("name.length()", "lt:10");
         params.add("name.length()", "le:10");
         params.add("name.length()", "not_equals:10");
-        SearchRequest searchRequest = new SearchRequest(params);
+        SearchRequest searchRequest = new SearchRequest(params, Filter.class, Sorting.class,Map.of());
         Filter filter = searchRequest.getFilter();
         assertIterableEquals(List.of(
                         new FilterCondition("name", EQUALS, "Egor"),

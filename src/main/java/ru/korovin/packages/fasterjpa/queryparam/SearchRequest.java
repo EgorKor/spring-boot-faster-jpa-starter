@@ -1,14 +1,14 @@
 package ru.korovin.packages.fasterjpa.queryparam;
 
-import ru.korovin.packages.fasterjpa.queryparam.factories.Paginations;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterCondition;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterOperation;
-import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.springframework.util.MultiValueMap;
+import ru.korovin.packages.fasterjpa.queryparam.factories.Paginations;
+import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterCondition;
+import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterOperation;
+import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -16,7 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @AllArgsConstructor
-public class SearchRequest {
+public class SearchRequest<F extends Filter<?>, S extends Sorting> {
 
     private static final Set<String> NON_FILTER_KEYS;
     public final static String SORT_PARAM;
@@ -56,18 +56,15 @@ public class SearchRequest {
 
     @Getter
     private final Pagination pagination;
-    private final Filter filter;
-    private final Sorting sorting;
+    private final F filter;
+    private final S sorting;
     private final Map<String, BiFunction<String, String, Filter<?>>> customParsers;
 
-    public SearchRequest(MultiValueMap<String, String> params) {
-        this(params, Filter.class, Sorting.class, new HashMap<>());
-    }
 
-    public <F extends Filter<?>, S extends Sorting> SearchRequest(@NonNull MultiValueMap<String, String> params,
-                                                                  Class<F> filterClass,
-                                                                  Class<S> sortingClass,
-                                                                  @NonNull Map<String, BiFunction<String, String, Filter<?>>> customParsers) {
+    public SearchRequest(@NonNull MultiValueMap<String, String> params,
+                         Class<F> filterClass,
+                         Class<S> sortingClass,
+                         @NonNull Map<String, BiFunction<String, String, Filter<?>>> customParsers) {
         this.customParsers = customParsers;
         if (filterClass == null) {
             Class<? extends Filter> fClass = Filter.class;
@@ -114,7 +111,7 @@ public class SearchRequest {
     }
 
     @SneakyThrows
-    private <F extends Filter<?>> F parseFilter(MultiValueMap<String, String> queryParams, Class<F> filterClass) {
+    private F parseFilter(MultiValueMap<String, String> queryParams, Class<F> filterClass) {
         F filterObject = filterClass.getDeclaredConstructor().newInstance();
         List<FilterCondition> filters = new ArrayList<>();
         List<Filter<?>> customFilters = new ArrayList<>();
@@ -174,11 +171,11 @@ public class SearchRequest {
         return Paginations.of(page, pageSize);
     }
 
-    public <F extends Filter<?>> F getFilter() {
+    public F getFilter() {
         return (F) filter;
     }
 
-    public <S extends Sorting> S getSorting() {
+    public S getSorting() {
         return (S) sorting;
     }
 
