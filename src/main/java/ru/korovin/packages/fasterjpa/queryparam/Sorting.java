@@ -49,10 +49,6 @@ public class Sorting {
     public static final String ASC = "asc";
     private List<SortingUnit> sort = new ArrayList<>();
 
-    public static Sorting unsorted() {
-        return new Sorting();
-    }
-
     public static SortingBuilder builder() {
         return new SortingBuilder();
     }

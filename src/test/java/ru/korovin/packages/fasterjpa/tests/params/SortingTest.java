@@ -2,6 +2,7 @@ package ru.korovin.packages.fasterjpa.tests.params;
 
 import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
+import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
 import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Order;
@@ -60,7 +61,7 @@ public class SortingTest {
 
     @Test
     void toCriteriaOrderList_shouldReturnEmptyListForUnsorted() {
-        Sorting sorting = Sorting.unsorted();
+        Sorting sorting = Sortings.unsorted();
         List<Order> result = sorting.toCriteriaOrderList(root, cb);
         assertTrue(result.isEmpty());
     }

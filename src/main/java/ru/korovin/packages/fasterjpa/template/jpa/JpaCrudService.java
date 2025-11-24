@@ -20,6 +20,7 @@ import ru.korovin.packages.fasterjpa.exception.*;
 import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.Pagination;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
+import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
 import ru.korovin.packages.fasterjpa.service.CrudService;
 import ru.korovin.packages.fasterjpa.service.Joins;
 import ru.korovin.packages.fasterjpa.service.PageableResult;
@@ -275,7 +276,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
     @Override
     public PageableResult<T> getPage(Filter<T> filter, Pagination pagination) {
         filter.setEntityType(entityType);
-        return getPage(filter, Sorting.unsorted(), pagination);
+        return getPage(filter, Sortings.unsorted(), pagination);
     }
 
     @Override
@@ -293,7 +294,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
     @Override
     public Stream<T> getDataStream(Filter<T> filter) {
         filter.setEntityType(entityType);
-        return getDataStream(filter, Sorting.unsorted());
+        return getDataStream(filter, Sortings.unsorted());
     }
 
     @Override

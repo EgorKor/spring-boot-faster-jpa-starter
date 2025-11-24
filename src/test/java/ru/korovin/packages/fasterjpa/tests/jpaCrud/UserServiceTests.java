@@ -19,6 +19,7 @@ import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Paginations;
+import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
 import ru.korovin.packages.fasterjpa.service.Joins;
 import ru.korovin.packages.fasterjpa.template.jpa.JpaEntityPropertyPatcher;
 import ru.korovin.packages.fasterjpa.testProject.model.User;
@@ -90,7 +91,7 @@ public class UserServiceTests {
     @Test
     public void testFindAll() {
         stats.setStatisticsEnabled(true);
-        var res = userService.getPage(Filter.empty(), Sorting.unsorted(), Paginations.unpaged());
+        var res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
         stats.setStatisticsEnabled(false);
         assertEquals(1, stats.getPrepareStatementCount());
     }
@@ -108,7 +109,7 @@ public class UserServiceTests {
     public void softDeleteByFilter() {
         stats.setStatisticsEnabled(true);
         userService.softDeleteByFilter(fb.and(fb.greater("id", "30")));
-        var res = userService.getPage(Filter.empty(), Sorting.unsorted(), Paginations.unpaged());
+        var res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
         assertEquals(2, stats.getPrepareStatementCount());
         assertEquals(30, res.getData().size());
         stats.setStatisticsEnabled(false);
@@ -120,12 +121,12 @@ public class UserServiceTests {
         userService.softDeleteByFilter(fb.and(
                 fb.lessOrEquals("id", "10")
         ));
-        var res = userService.getPage(Filter.empty(), Sorting.unsorted(), Paginations.unpaged());
+        var res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
         assertEquals(res.getData().size(), 40);
         userService.restoreByFilter(fb.and(
                 fb.lessOrEquals("id", "5")
         ));
-        res = userService.getPage(Filter.empty(), Sorting.unsorted(), Paginations.unpaged());
+        res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
         assertEquals(res.getData().size(), 45);
         assertEquals(4, stats.getPrepareStatementCount());
     }
@@ -133,7 +134,7 @@ public class UserServiceTests {
     @Test
     public void testPaginationRequest() {
         stats.setStatisticsEnabled(true);
-        List<User> users = userService.getPage(Filter.empty(), Sorting.unsorted(), Paginations.of(0, 10)).getData();
+        List<User> users = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.of(0, 10)).getData();
         stats.setStatisticsEnabled(false);
         assertEquals(2, stats.getPrepareStatementCount());
         assertEquals(10, users.size());
@@ -143,7 +144,7 @@ public class UserServiceTests {
     public void testFilterConcat() {
         stats.setStatisticsEnabled(true);
         List<User> users = userService.getPage(Filters.contains("concat(to_char(id,'FM09'),'.',email,'.',firstName)", "some"),
-                Sorting.unsorted(), Paginations.of(0, 10)).getData();
+                Sortings.unsorted(), Paginations.of(0, 10)).getData();
         stats.setStatisticsEnabled(false);
         assertEquals(1, stats.getPrepareStatementCount());
     }
@@ -160,7 +161,7 @@ public class UserServiceTests {
         testFilter.getConditions().add(fb.contains("nameAlias", ""));
         testFilter.validateFields();
         testFilter.applyAllies();
-        userService.getPage(testFilter, Sorting.unsorted(), Paginations.of(1, 10));
+        userService.getPage(testFilter, Sortings.unsorted(), Paginations.of(1, 10));
     }
 
     public static class TestFilter extends Filter<User> {

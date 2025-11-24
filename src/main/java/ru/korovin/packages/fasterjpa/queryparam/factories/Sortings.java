@@ -17,6 +17,10 @@ public class Sortings {
         return new Sorting(List.of(new SortingUnit(field, "desc")));
     }
 
+    public static Sorting unsorted() {
+        return new Sorting();
+    }
+
     public static Sorting of(SortingUnit... sortingUnits) {
         return new Sorting(new ArrayList<>(Arrays.asList(sortingUnits)));
     }
