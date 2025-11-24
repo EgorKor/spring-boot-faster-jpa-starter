@@ -83,7 +83,7 @@ class FilterTokenizerTest {
         assertToken(tokens.get(4), FilterTokenType.IDENTIFIER, "activityKind.name", 15);
         assertToken(tokens.get(5), FilterTokenType.PUNCTUATION, ")", 32);
         assertToken(tokens.get(6), FilterTokenType.PUNCTUATION, ",", 33);
-        assertToken(tokens.get(7), FilterTokenType.STRING_LITERAL, "'default'", 35);
+        assertToken(tokens.get(7), FilterTokenType.STRING_LITERAL, "'default'", 34);
         assertToken(tokens.get(8), FilterTokenType.PUNCTUATION, ")", 44);
     }
 

@@ -32,6 +32,7 @@ public class FilterTokenizer {
     );
 
 
+
     public FilterValidationResult validate(List<FilterToken> tokens) {
         List<String> errors = new ArrayList<>();
 
@@ -112,31 +113,33 @@ public class FilterTokenizer {
     private int countFunctionArguments(int functionIndex, List<FilterToken> tokens) {
         int argCount = 0;
         int parenDepth = 0;
-        int startIndex = functionIndex + 2; // Пропускаем имя функции и открывающую скобку
 
-        for (int i = startIndex; i < tokens.size(); i++) {
+        // Начинаем с токена после открывающей скобки функции
+        for (int i = functionIndex + 2; i < tokens.size(); i++) {
             FilterToken token = tokens.get(i);
 
             if (token.value().equals("(")) {
                 parenDepth++;
             } else if (token.value().equals(")")) {
                 if (parenDepth == 0) {
-                    // Достигли закрывающей скобки функции
-                    if (i > startIndex) {
-                        FilterToken prevToken = tokens.get(i - 1);
-                        if (!prevToken.value().equals("(")) {
-                            argCount++;
-                        }
-                    }
-                    break;
+                    break; // Закрывающая скобка функции
                 }
                 parenDepth--;
             }
 
+            // На уровне аргументов функции
             if (parenDepth == 0) {
                 if (token.value().equals(",")) {
                     argCount++;
                 }
+            }
+        }
+
+        // Добавляем 1 для последнего аргумента (если есть)
+        if (functionIndex + 2 < tokens.size()) {
+            FilterToken firstArg = tokens.get(functionIndex + 2);
+            if (!firstArg.value().equals(")") && !firstArg.value().equals(",")) {
+                argCount++;
             }
         }
 
@@ -182,71 +185,6 @@ public class FilterTokenizer {
         }
     }
 
-    // Валидация специфичных функций
-    private void validateSpecificFunction(FilterToken functionToken,
-                                          int index,
-                                          List<FilterToken> tokens,
-                                          List<String> errors) {
-        String functionName = functionToken.value().toLowerCase();
-
-        switch (functionName) {
-            case "concat":
-                validateConcatFunction(index, tokens, errors);
-                break;
-            case "to_char":
-                validateToCharFunction(index, tokens, errors);
-                break;
-            case "substring":
-                validateSubstringFunction(index, tokens, errors);
-                break;
-            case "coalesce":
-                validateCoalesceFunction(index, tokens, errors);
-                break;
-        }
-    }
-
-    private void validateConcatFunction(int functionIndex, List<FilterToken> tokens, List<String> errors) {
-        // CONCAT должен иметь хотя бы 2 аргумента
-        int argCount = countArguments(functionIndex, tokens);
-        if (argCount < 2) {
-            errors.add("CONCAT function requires at least 2 arguments at position " + tokens.get(functionIndex).position());
-        }
-    }
-
-    private void validateToCharFunction(int functionIndex, List<FilterToken> tokens, List<String> errors) {
-        // TO_CHAR должен иметь 2 аргумента: значение и формат
-        int argCount = countArguments(functionIndex, tokens);
-        if (argCount != 2) {
-            errors.add("TO_CHAR function requires exactly 2 arguments at position " + tokens.get(functionIndex).position());
-        }
-    }
-
-    private void validateSubstringFunction(int functionIndex, List<FilterToken> tokens, List<String> errors) {
-        // SUBSTRING должен иметь специфичный синтаксис
-        boolean hasFromKeyword = false;
-        for (int i = functionIndex; i < tokens.size(); i++) {
-            if (tokens.get(i).value().equalsIgnoreCase("from")) {
-                hasFromKeyword = true;
-                break;
-            }
-            if (tokens.get(i).value().equals(")")) {
-                break;
-            }
-        }
-
-        if (!hasFromKeyword) {
-            errors.add("SUBSTRING function requires 'FROM' keyword at position " + tokens.get(functionIndex).position());
-        }
-    }
-
-    private void validateCoalesceFunction(int functionIndex, List<FilterToken> tokens, List<String> errors) {
-        // COALESCE должен иметь хотя бы 1 аргумент
-        int argCount = countArguments(functionIndex, tokens);
-        if (argCount < 1) {
-            errors.add("COALESCE function requires at least 1 argument at position " + tokens.get(functionIndex).position());
-        }
-    }
-
     // Подсчет аргументов функции
     // Подсчет аргументов функции (исправленная версия)
     private int countArguments(int functionIndex, List<FilterToken> tokens) {
@@ -261,7 +199,7 @@ public class FilterTokenizer {
 
             if (token.value().equals("(")) {
                 parenDepth++;
-                if (parenDepth == 1 && !foundOpeningParen) {
+                if (parenDepth == 1) {
                     foundOpeningParen = true;
                     continue; // Пропускаем открывающую скобку самой функции
                 }
@@ -281,7 +219,7 @@ public class FilterTokenizer {
                 if (token.value().equals(",")) {
                     argCount++;
                     inArgument = false;
-                } else if (!token.value().equals("(") && !inArgument) {
+                } else if (!inArgument) {
                     inArgument = true;
                 }
             } else if (parenDepth == 0 && foundOpeningParen) {
@@ -437,14 +375,18 @@ public class FilterTokenizer {
 
     public List<FilterToken> tokenize(String sqlExpression) {
         List<FilterToken> tokens = new ArrayList<>();
-        Matcher matcher = TOKEN_PATTERNS.matcher(sqlExpression);
+
+        // Предварительная обработка: удаляем пробелы и переносы строк между аргументами функций
+        String processedExpression = preprocessExpression(sqlExpression);
+
+        Matcher matcher = TOKEN_PATTERNS.matcher(processedExpression);
 
         int lastPosition = 0;
 
         while (matcher.find()) {
             // Проверяем, нет ли пропущенных символов
             if (matcher.start() > lastPosition) {
-                String skipped = sqlExpression.substring(lastPosition, matcher.start()).trim();
+                String skipped = processedExpression.substring(lastPosition, matcher.start()).trim();
                 if (!skipped.isEmpty()) {
                     tokens.add(new FilterToken(FilterTokenType.UNKNOWN, skipped, lastPosition));
                 }
@@ -459,8 +401,8 @@ public class FilterTokenizer {
         }
 
         // Проверяем хвост строки
-        if (lastPosition < sqlExpression.length()) {
-            String remaining = sqlExpression.substring(lastPosition).trim();
+        if (lastPosition < processedExpression.length()) {
+            String remaining = processedExpression.substring(lastPosition).trim();
             if (!remaining.isEmpty()) {
                 tokens.add(new FilterToken(FilterTokenType.UNKNOWN, remaining, lastPosition));
             }
@@ -468,6 +410,177 @@ public class FilterTokenizer {
 
         return tokens;
     }
+
+    /**
+     * Предварительная обработка выражения:
+     * Удаляет пробелы и переносы строк между аргументами функций,
+     * но сохраняет их в строковых литералах.
+     */
+    private String preprocessExpression(String expression) {
+        if (expression == null || expression.isEmpty()) {
+            return expression;
+        }
+
+        StringBuilder result = new StringBuilder();
+        boolean inStringLiteral = false;
+        boolean inFunctionArgs = false;
+        int parenDepth = 0;
+        int functionStart = -1;
+
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
+
+            if (c == '\'') {
+                inStringLiteral = !inStringLiteral;
+                result.append(c);
+            } else if (inStringLiteral) {
+                // В строковом литерале сохраняем все как есть
+                result.append(c);
+            } else if (c == '(') {
+                parenDepth++;
+                // Проверяем, является ли это открывающей скобкой функции
+                if (parenDepth == 1 && isPrecededByFunction(expression, i)) {
+                    inFunctionArgs = true;
+                    functionStart = i;
+                }
+                result.append(c);
+            } else if (c == ')') {
+                parenDepth--;
+                if (parenDepth == 0 && inFunctionArgs) {
+                    inFunctionArgs = false;
+                }
+                result.append(c);
+            } else if (inFunctionArgs && (c == ' ' || c == '\n' || c == '\r' || c == '\t')) {
+                // В аргументах функции игнорируем пробелы и переносы строк
+                // Но сохраняем пробелы вокруг запятых для разделения аргументов
+                if (shouldPreserveSpace(expression, i)) {
+                    result.append(' ');
+                }
+                // Иначе просто пропускаем пробел/перенос
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Проверяет, предшествует ли позиции открывающей скобки имя функции
+     */
+    private boolean isPrecededByFunction(String expression, int parenPos) {
+        if (parenPos <= 0) return false;
+
+        // Ищем начало идентификатора перед скобкой
+        int start = parenPos - 1;
+        while (start >= 0 && Character.isWhitespace(expression.charAt(start))) {
+            start--;
+        }
+
+        if (start < 0) return false;
+
+        // Ищем конец идентификатора
+        int end = start;
+        while (start >= 0 && (Character.isLetterOrDigit(expression.charAt(start)) ||
+                expression.charAt(start) == '_' || expression.charAt(start) == '$')) {
+            start--;
+        }
+
+        String identifier = expression.substring(start + 1, end + 1);
+        return SUPPORTED_FUNCTIONS.contains(identifier.toLowerCase());
+    }
+
+    /**
+     * Определяет, нужно ли сохранить пробел в аргументах функции.
+     * Сохраняем пробелы вокруг запятых для правильного разделения аргументов.
+     */
+    private boolean shouldPreserveSpace(String expression, int spacePos) {
+        // Проверяем символ перед пробелом
+        if (spacePos > 0) {
+            char prevChar = expression.charAt(spacePos - 1);
+            if (prevChar == ',' || prevChar == '(') {
+                return false; // Пробел после запятой или открывающей скобки можно удалить
+            }
+        }
+
+        // Проверяем символ после пробела
+        if (spacePos < expression.length() - 1) {
+            char nextChar = expression.charAt(spacePos + 1);
+            if (nextChar == ',' || nextChar == ')') {
+                return false; // Пробел перед запятой или закрывающей скобкой можно удалить
+            }
+        }
+
+        // Во всех остальных случаях в аргументах функции пробелы можно удалить
+        return false;
+    }
+
+    // Альтернативная, более простая версия предобработки
+    private String preprocessExpressionSimple(String expression) {
+        if (expression == null || expression.isEmpty()) {
+            return expression;
+        }
+
+        StringBuilder result = new StringBuilder();
+        boolean inStringLiteral = false;
+
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
+
+            if (c == '\'') {
+                inStringLiteral = !inStringLiteral;
+                result.append(c);
+            } else if (inStringLiteral) {
+                // В строковом литерале сохраняем все как есть
+                result.append(c);
+            } else if (c == ' ' || c == '\n' || c == '\r' || c == '\t') {
+                // Вне строковых литералов заменяем все пробельные символы на обычные пробелы
+                // и удаляем лишние пробелы
+                if (result.length() > 0 && result.charAt(result.length() - 1) != ' ') {
+                    // Сохраняем только один пробел между токенами
+                    boolean needsSpace = isSpaceNeeded(result, expression, i);
+                    if (needsSpace) {
+                        result.append(' ');
+                    }
+                }
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString().trim();
+    }
+
+    /**
+     * Определяет, нужен ли пробел в данной позиции
+     */
+    private boolean isSpaceNeeded(StringBuilder currentResult, String original, int currentPos) {
+        if (currentResult.length() == 0) return false;
+
+        char lastChar = currentResult.charAt(currentResult.length() - 1);
+
+        // Не нужен пробел после открывающей скобки, запятой, операторов
+        if (lastChar == '(' || lastChar == ',' || lastChar == '=' ||
+                lastChar == '+' || lastChar == '-' || lastChar == '*' || lastChar == '/' ||
+                lastChar == '<' || lastChar == '>') {
+            return false;
+        }
+
+        // Не нужен пробел перед закрывающей скобкой, запятой, операторами
+        if (currentPos < original.length() - 1) {
+            char nextChar = original.charAt(currentPos + 1);
+            if (nextChar == ')' || nextChar == ',' || nextChar == '=' ||
+                    nextChar == '+' || nextChar == '-' || nextChar == '*' || nextChar == '/' ||
+                    nextChar == '<' || nextChar == '>') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+
 
     private FilterTokenType determineFilterTokenType(String token) {
         // 1. Сначала проверяем пунктуацию и операторы - они самые простые

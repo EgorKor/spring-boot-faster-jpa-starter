@@ -202,6 +202,21 @@ public class JpaCrudServiceTests {
     }
 
     @Test
+    public void shouldParseConcatTextBlock(){
+        assertDoesNotThrow(() -> {
+            testEntityService.countByFilter(
+                    Filters.like("""
+                            concat(
+                                to_char(id, 'FM099'),
+                                ' ',
+                                cast(id, 'text')
+                            )
+                            ""","something")
+            );
+        });
+    }
+
+    @Test
     public void shouldParseCoalesce() {
         assertEquals(
                 1, testEntityService.countByFilter(
