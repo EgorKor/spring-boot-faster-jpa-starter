@@ -4,10 +4,8 @@ import jakarta.persistence.*;
 import jakarta.persistence.criteria.*;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
-import lombok.Builder;
 import lombok.NonNull;
 import lombok.SneakyThrows;
-import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Session;
 import org.hibernate.jpa.HibernateHints;
@@ -266,6 +264,11 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
     @Override
     public List<T> getList() {
         return getList(Filter.empty());
+    }
+
+    @Override
+    public List<T> getList(Joins joins) {
+        return getList(Filter.empty().withFetchJoins(joins));
     }
 
     @Override

@@ -75,6 +75,8 @@ public interface CrudService<T, ID> {
      */
     List<T> getList();
 
+    List<T> getList(Joins joins);
+
     /**
      * Запрос на получение списка сущностей с учётом фильтрации
      *
