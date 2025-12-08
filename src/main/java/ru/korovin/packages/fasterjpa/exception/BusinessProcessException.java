@@ -7,16 +7,16 @@ import lombok.NonNull;
 public class BusinessProcessException extends RuntimeException {
     private final Class<?> businessProcess;
     private final String message;
-
+    private final static String MESSAGE_TEMPLATE = "Ошибка внутри бизнес процесса '%s': %s";
 
     public BusinessProcessException(@NonNull Class<?> businessProcess, @NonNull Throwable cause) {
         this.businessProcess = businessProcess;
-        this.message = cause.getMessage();
+        this.message = String.format(MESSAGE_TEMPLATE, businessProcess.getSimpleName(), cause.getMessage());
     }
 
     public BusinessProcessException(@NonNull Class<?> businessProcess, @NonNull String message) {
         this.businessProcess = businessProcess;
-        this.message = message;
+        this.message = String.format(MESSAGE_TEMPLATE, businessProcess.getSimpleName(), message);
     }
 
 }
