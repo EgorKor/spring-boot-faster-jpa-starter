@@ -40,6 +40,17 @@ public class GenericApiControllerAdvice {
                 .build();
     }
 
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler
+    public GenericErrorDto<?> handleBusinessProcessException(BusinessProcessException e) {
+        log.error("Ошибка внутри бизнес-процесса: {}", e.getMessage(), e);
+        return GenericErrorDto.<Void>builder()
+                .code(500)
+                .message(e.getMessage())
+                .date(LocalDateTime.ofInstant(Instant.now(), ZoneId.of("UTC")).toString())
+                .build();
+    }
+
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler
     public GenericErrorDto<Void> handleResourceUniqueException(ResourceUniqueException e) {
