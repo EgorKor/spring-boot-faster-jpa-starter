@@ -1,7 +1,10 @@
 package ru.korovin.packages.fasterjpa.util;
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+@EqualsAndHashCode
 @Getter
 public class Pair<T1,T2> {
     private final T1 first;

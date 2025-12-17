@@ -23,6 +23,12 @@ public record Joins(Set<String> properties) {
                 .collect(Collectors.toSet()));
     }
 
+    public static Joins ofCollection(Collection<Joins> joins) {
+        return new Joins(joins.stream()
+                .flatMap(join -> join.properties().stream())
+                .collect(Collectors.toSet()));
+    }
+
     public static Joins empty() {
         return new Joins(new HashSet<>());
     }
