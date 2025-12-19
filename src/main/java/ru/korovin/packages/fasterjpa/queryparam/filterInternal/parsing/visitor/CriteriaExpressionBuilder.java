@@ -222,8 +222,7 @@ public class CriteriaExpressionBuilder implements ASTVisitor<Expression<?>> {
             return (Expression<String>) expr;
         }
 
-        // Для числовых и других типов используем TO_CHAR или CAST
-        return cb.function("TO_CHAR", String.class, expr);
+        return cb.toString(getTypedExpression(expr, Character.class));
     }
 
 
