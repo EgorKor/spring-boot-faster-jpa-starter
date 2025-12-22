@@ -13,10 +13,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.transaction.BeforeTransaction;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
-import ru.korovin.packages.fasterjpa.annotations.FieldParamMapping;
 import ru.korovin.packages.fasterjpa.exception.ResourceNotFoundException;
 import ru.korovin.packages.fasterjpa.queryparam.Filter;
-import ru.korovin.packages.fasterjpa.queryparam.Sorting;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Paginations;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
@@ -30,6 +28,7 @@ import ru.korovin.packages.fasterjpa.testProject.service.impl.UserServiceImpl;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static ru.korovin.packages.fasterjpa.queryparam.factories.Filters.fb;
@@ -165,8 +164,7 @@ public class UserServiceTests {
     }
 
     public static class TestFilter extends Filter<User> {
-        @FieldParamMapping(sqlMapping = "email")
-        private String nameAlias;
+        Supplier<String> nameAlias = () -> "firstName";
     }
 
     //    @Transactional(propagation = Propagation.NEVER)

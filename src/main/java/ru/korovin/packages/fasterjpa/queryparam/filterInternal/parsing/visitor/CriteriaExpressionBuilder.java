@@ -93,9 +93,6 @@ public class CriteriaExpressionBuilder implements ASTVisitor<Expression<?>> {
                         convertToInteger(node.arguments.get(1)));
 
             case "right":
-                String str = args.get(0).toString();
-                int length = convertToInteger(node.arguments.get(1));
-                // Реализация через substring(length - len, length)
                 return cb.function("RIGHT", String.class, args.get(0), args.get(1));
 
             case "lpad":
@@ -158,8 +155,8 @@ public class CriteriaExpressionBuilder implements ASTVisitor<Expression<?>> {
                         "REPLACE",
                         String.class,
                         args.get(0),
-                        getTypedExpression(args.get(1), Number.class),
-                        getTypedExpression(args.get(2), Number.class)
+                        args.get(1),
+                        args.get(2)
                 );
 
             default:

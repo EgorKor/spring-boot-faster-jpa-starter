@@ -7,7 +7,6 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
 import ru.korovin.packages.fasterjpa.annotations.AllowedOperations;
-import ru.korovin.packages.fasterjpa.annotations.FieldParamMapping;
 import ru.korovin.packages.fasterjpa.annotations.ParamCountLimit;
 import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
 import ru.korovin.packages.fasterjpa.queryparam.filterInternal.*;
@@ -30,7 +29,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static ru.korovin.packages.fasterjpa.annotations.FieldParamMapping.NO_MAPPING;
 import static ru.korovin.packages.fasterjpa.queryparam.factories.Filters.fb;
 import static ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterOperation.IS;
 
@@ -648,6 +646,7 @@ public class Filter<T> implements Specification<T> {
         applyAllies();
     }
 
+    @SneakyThrows
     public void applyAllies() {
         if (this.getClass() == Filter.class) {
             return;
@@ -655,14 +654,12 @@ public class Filter<T> implements Specification<T> {
         initializeOriginalNamesMap();
         Field[] fields = this.getClass().getDeclaredFields();
         for (Field field : fields) {
-            FieldParamMapping fieldParamMapping = field.getAnnotation(FieldParamMapping.class);
-            if (fieldParamMapping == null
-                    || fieldParamMapping.sqlMapping().equals(NO_MAPPING)) {
+            field.setAccessible(true);
+            if (field.getType() != Supplier.class) {
                 continue;
             }
-            String alliesName = fieldParamMapping.sqlMapping();
-            String fieldName = Objects.equals(fieldParamMapping.requestParamMapping(), NO_MAPPING)
-                    ? field.getName() : fieldParamMapping.requestParamMapping();
+            String alliesName = ((Supplier<String>) field.get(this)).get();
+            String fieldName = field.getName();
             String regexSafeFieldName = Pattern.quote(fieldName);
 
             for (int i = 0; i < conditions.size(); i++) {
@@ -696,14 +693,7 @@ public class Filter<T> implements Specification<T> {
         Field[] declaredFields = this.getClass().getDeclaredFields();
         Set<String> allowedFields = Arrays.stream(declaredFields)
                 .map(f -> {
-                    FieldParamMapping allies;
-                    String paramName;
-                    if ((allies = f.getAnnotation(FieldParamMapping.class)) != null
-                            && !Objects.equals(allies.requestParamMapping(), NO_MAPPING)) {
-                        paramName = allies.requestParamMapping();
-                    } else {
-                        paramName = f.getName();
-                    }
+                    String paramName = f.getName();
 
                     ParamCountLimit paramLimit = f.getAnnotation(ParamCountLimit.class);
                     if (paramLimit != null && containsFilterWithField(paramName)
@@ -730,6 +720,7 @@ public class Filter<T> implements Specification<T> {
         }
     }
 
+    @SneakyThrows
     public void validateOperations() {
         if (this.getClass() == Filter.class) {
             return;
@@ -738,32 +729,23 @@ public class Filter<T> implements Specification<T> {
         Field[] fields = this.getClass().getDeclaredFields();
 
         for (Field field : fields) {
+            field.setAccessible(true);
             if (!field.isAnnotationPresent(AllowedOperations.class)) {
                 continue;
             }
 
-            String originalName = field.getName();
-            String checkingName = field.getName();
-            if (field.isAnnotationPresent(FieldParamMapping.class)) {
-                FieldParamMapping fieldParamMapping = field.getAnnotation(FieldParamMapping.class);
-                if (!fieldParamMapping.sqlMapping().equals(NO_MAPPING)) {
-                    checkingName = fieldParamMapping.sqlMapping();
-                }
-                if (!fieldParamMapping.requestParamMapping().equals(NO_MAPPING)) {
-                    originalName = fieldParamMapping.requestParamMapping();
-                }
-            }
+            String paramName = ((Supplier<String>)field.get(this)).get();
 
             AllowedOperations allowedOperationsAnnotation = field.getAnnotation(AllowedOperations.class);
 
-            if (index.containsKey(checkingName)) {
-                Set<FilterOperation> usedOperations = index.get(checkingName);
+            if (index.containsKey(paramName)) {
+                Set<FilterOperation> usedOperations = index.get(paramName);
                 Set<FilterOperation> allowedOperations = Arrays.stream(allowedOperationsAnnotation.value())
                         .collect(Collectors.toSet());
 
                 for (FilterOperation usedOp : usedOperations) {
                     if (!allowedOperations.contains(usedOp)) {
-                        throw new InvalidParameterException("Недопустимая операция " + usedOp + " для параметра " + originalName);
+                        throw new InvalidParameterException("Недопустимая операция " + usedOp + " для параметра " + field.getName());
                     }
                 }
             }

@@ -1,6 +1,6 @@
 package ru.korovin.packages.fasterjpa.queryparam;
 
-import ru.korovin.packages.fasterjpa.annotations.FieldParamMapping;
+import lombok.*;
 import ru.korovin.packages.fasterjpa.annotations.ParamCountLimit;
 import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
 import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingBuilder;
@@ -9,14 +9,11 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
 import org.springframework.data.domain.Sort;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -74,15 +71,7 @@ public class Sorting {
                 .collect(Collectors.toSet());
 
         Set<String> allowedFields = Arrays.stream(this.getClass().getDeclaredFields())
-                .map(f -> {
-                    FieldParamMapping allies;
-                    if ((allies = f.getAnnotation(FieldParamMapping.class)) != null
-                            && !Objects.equals(allies.requestParamMapping(), FieldParamMapping.NO_MAPPING)) {
-                        return allies.requestParamMapping();
-                    } else {
-                        return f.getName();
-                    }
-                })
+                .map(Field::getName)
                 .collect(Collectors.toSet());
 
         paramsNames.removeAll(allowedFields);
@@ -118,6 +107,7 @@ public class Sorting {
         return _this();
     }
 
+    @SneakyThrows
     public void applyAllies() {
         if (isMethodCallByParentClass()) {
             return;
@@ -125,14 +115,11 @@ public class Sorting {
         //TODO починить
         Field[] fields = this.getClass().getDeclaredFields();
         for (Field field : fields) {
-            FieldParamMapping fieldParamMapping = field.getAnnotation(FieldParamMapping.class);
-            if (fieldParamMapping == null
-                    || fieldParamMapping.sqlMapping().equals(FieldParamMapping.NO_MAPPING)) {
+            if(field.getType() != Supplier.class){
                 continue;
             }
-            String alliesName = fieldParamMapping.sqlMapping();
-            String fieldName = Objects.equals(fieldParamMapping.requestParamMapping(), FieldParamMapping.NO_MAPPING)
-                    ? field.getName() : fieldParamMapping.requestParamMapping();
+            String alliesName = ((Supplier<String>)field.get(this)).get();
+            String fieldName = field.getName();
             String regexSafeFieldName = Pattern.quote(fieldName);
 
             for (int i = 0; i < sort.size(); i++) {
