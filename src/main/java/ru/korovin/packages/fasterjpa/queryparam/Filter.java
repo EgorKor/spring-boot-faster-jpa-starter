@@ -54,6 +54,7 @@ public class Filter<T> implements Specification<T> {
     public static final String FILTER_NOT_FOUND_MESSAGE = "В объекте %s , не найден фильтр с именем: %s";
     protected List<FilterCondition> conditions;
     protected Class<?> entityType;
+    protected boolean isDistinct;
     protected List<Consumer<Root<T>>> queryConfigurers = new ArrayList<>();
     private List<String> fieldWhiteList = new ArrayList<>();
     private List<String> fetchingProperties = new ArrayList<>();
@@ -84,6 +85,7 @@ public class Filter<T> implements Specification<T> {
         copiedFilter.setEntityType(entityType);
         copiedFilter.setFieldWhiteList(fieldWhiteList);
         copiedFilter.setConditions(conditions);
+        copiedFilter.setDistinct(isDistinct);
         return copiedFilter;
     }
 
@@ -161,6 +163,7 @@ public class Filter<T> implements Specification<T> {
     public Predicate toPredicate(Root<T> root,
                                  CriteriaQuery<?> query,
                                  CriteriaBuilder cb) {
+        query.distinct(isDistinct);
         return toPredicate(root, cb);
     }
 
@@ -214,6 +217,11 @@ public class Filter<T> implements Specification<T> {
                     }
             );
         }
+        return _this();
+    }
+
+    public <R extends Filter<?>> R distinct(){
+        this.isDistinct = true;
         return _this();
     }
 
