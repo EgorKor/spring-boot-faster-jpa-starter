@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static ru.korovin.packages.fasterjpa.queryparam.filterInternal.FieldExpressionCompiler.getNestedPath;
+
 public class CriteriaExpressionBuilder implements ASTVisitor<Expression<?>> {
     private final CriteriaBuilder cb;
     private final Root<?> root;
@@ -238,21 +240,4 @@ public class CriteriaExpressionBuilder implements ASTVisitor<Expression<?>> {
         return cb.literal(node.value);
     }
 
-    /**
-     * Ваш существующий метод для получения вложенных путей
-     */
-    private static <T> Expression<?> getNestedPath(Root<T> root, String fieldPath) {
-        if (!fieldPath.contains(".")) {
-            return root.get(fieldPath);
-        }
-
-        String[] parts = fieldPath.split("\\.");
-        Path<?> path = root.get(parts[0]);
-
-        for (int i = 1; i < parts.length; i++) {
-            path = path.get(parts[i]);
-        }
-
-        return path;
-    }
 }

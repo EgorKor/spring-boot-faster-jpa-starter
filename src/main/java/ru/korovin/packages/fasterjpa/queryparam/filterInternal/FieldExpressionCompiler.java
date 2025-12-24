@@ -44,7 +44,7 @@ public class FieldExpressionCompiler {
     }
 
     // Ваш существующий метод
-    private static <T> Expression<?> getNestedPath(Root<T> root, String fieldPath) {
+    public static <T> Expression<?> getNestedPath(Root<T> root, String fieldPath) {
         if (!fieldPath.contains(".")) {
             return root.get(fieldPath);
         }

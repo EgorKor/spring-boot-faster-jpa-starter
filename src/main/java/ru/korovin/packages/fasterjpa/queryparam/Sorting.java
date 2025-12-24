@@ -1,14 +1,11 @@
 package ru.korovin.packages.fasterjpa.queryparam;
 
+import jakarta.persistence.criteria.*;
 import lombok.*;
 import ru.korovin.packages.fasterjpa.annotations.ParamCountLimit;
 import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
 import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingBuilder;
 import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.Order;
-import jakarta.persistence.criteria.Path;
-import jakarta.persistence.criteria.Root;
 import org.springframework.data.domain.Sort;
 
 import java.lang.reflect.Field;
@@ -17,7 +14,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static ru.korovin.packages.fasterjpa.queryparam.Filter.getNestedPath;
+import static ru.korovin.packages.fasterjpa.queryparam.filterInternal.FieldExpressionCompiler.getNestedPath;
 
 /**
  * Параметр запроса для сортировки запрашиваемых ресурсов.
@@ -112,7 +109,6 @@ public class Sorting {
         if (isMethodCallByParentClass()) {
             return;
         }
-        //TODO починить
         Field[] fields = this.getClass().getDeclaredFields();
         for (Field field : fields) {
             if(field.getType() != Supplier.class){
@@ -151,7 +147,7 @@ public class Sorting {
                                                @NonNull CriteriaBuilder cb) {
         List<Order> orderList = new ArrayList<>();
         for (SortingUnit s : sort) {
-            Path<T> path = s.field().contains(".") ? getNestedPath(root, s.field()) : root.get(s.field());
+            Expression<?> path = s.field().contains(".") ? getNestedPath(root, s.field()) : root.get(s.field());
             if (s.order().equalsIgnoreCase("asc")) {
                 orderList.add(cb.asc(path));
             } else if (s.order().equalsIgnoreCase("desc")) {

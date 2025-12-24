@@ -89,15 +89,6 @@ public class Filter<T> implements Specification<T> {
         return copiedFilter;
     }
 
-    public static <T> Path<T> getNestedPath(Root<T> root, String field) {
-        String[] fields = field.split("\\.");
-        Path<T> path = root.get(fields[0]);
-        for (int i = 1; i < fields.length; i++) {
-            path = path.get(fields[i]);
-        }
-        return path;
-    }
-
     public static FilterBuilder builder() {
         return fb;
     }
