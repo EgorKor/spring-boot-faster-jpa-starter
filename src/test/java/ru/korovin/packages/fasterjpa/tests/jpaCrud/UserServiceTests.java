@@ -196,5 +196,26 @@ public class UserServiceTests {
         //assertEquals(2,stats.getPrepareStatementCount());
     }
 
+    @Test
+    public void testGetProjection() {
+        Long attributesRow = userService.getAttributesProjection(List.of("id"),
+                Filters.equal("id", 1L).distinct(),
+                (row) -> row.getLong("id"));
+        System.out.println(attributesRow);
+    }
+
+    @Test
+    public void testGetProjectionList(){
+        List<Long> ids = userService.getAttributesProjectionList(List.of("id"),
+                Filter.empty(), (row) -> row.getLong("id"));
+        System.out.println(ids);
+
+        record UserProjection(Long id, String password){}
+        List<UserProjection> users = userService.getAttributesProjectionList(List.of("id", "password"),
+                Filter.empty(), (row) -> new UserProjection(row.getLong("id"), row.getString("password")));
+        System.out.println(users);
+
+    }
+
 
 }

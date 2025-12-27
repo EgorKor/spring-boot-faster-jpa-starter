@@ -1,5 +1,8 @@
 package ru.korovin.packages.fasterjpa.tests;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import ru.korovin.packages.fasterjpa.testProject.model.Order;
 import ru.korovin.packages.fasterjpa.testProject.model.User;
 import ru.korovin.packages.fasterjpa.testProject.repository.OrderRepository;
@@ -17,6 +20,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.transaction.BeforeTransaction;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+
+import java.util.List;
 
 
 @Import({UserServiceImpl.class, LocalValidatorFactoryBean.class})
@@ -63,6 +68,26 @@ public class HibernateTest {
         User user = userRepository.findById(1L).orElseThrow();
         System.out.println(user.getOrders());
         System.out.println("HELLO");
+    }
+
+    @Transactional
+    @Test
+    public void testSelectProjection(){
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<UserProjection> query = cb.createQuery(UserProjection.class);
+        Root<User> root = query.from(User.class);
+
+        // Выбор только нужных атрибутов
+        query.select(
+                cb.construct(UserProjection.class, root.get("id"), root.get("firstName"), root.get("password"))
+        );
+
+        List<UserProjection> result = entityManager.createQuery(query).getResultList();
+        result.forEach(System.out::println);
+    }
+
+    public record UserProjection(Long id, String firstName, String password) {
+
     }
 
 

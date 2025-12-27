@@ -19,10 +19,13 @@ import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.Pagination;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
+import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FieldExpressionCompiler;
 import ru.korovin.packages.fasterjpa.service.CrudService;
 import ru.korovin.packages.fasterjpa.service.Joins;
 import ru.korovin.packages.fasterjpa.service.PageableResult;
 import ru.korovin.packages.fasterjpa.service.UpdateSpecification;
+import ru.korovin.packages.fasterjpa.service.mapping.ProjectionMappingContext;
+import ru.korovin.packages.fasterjpa.service.mapping.ProjectionRowMapper;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -687,6 +690,79 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
     public T getReference(@NonNull ID id) {
         return repository.getReferenceById(id);
     }
+
+    @Override
+    public <P> P getAttributesProjection(List<String> attributes, Filter<T> filter, ProjectionRowMapper<P> rowMapper) {
+        CriteriaBuilder cb = persistenceContext.getCriteriaBuilder();
+        CriteriaQuery<Object[]> query = cb.createQuery(Object[].class);
+        Root<T> root = query.from(entityType);
+
+
+        Map<String, Integer> paramIndexMapping = new HashMap<>();
+        for (int i = 0; i < attributes.size(); i++) {
+            paramIndexMapping.put(attributes.get(i), i);
+        }
+
+        Selection<?>[] selections = new Selection[attributes.size()];
+        for (int i = 0; i < attributes.size(); i++) {
+            selections[i] = FieldExpressionCompiler.getNestedPath(root, attributes.get(i));
+        }
+
+        query.multiselect(selections);
+        query.distinct(filter.isDistinct());
+
+        Filter<T> resultFilter = getSoftDeleteSupportedFilter(filter);
+        resultFilter.setEntityType(entityType);
+
+        query.where(resultFilter.toPredicate(root, cb));
+
+        return rowMapper.mapRow(new ProjectionMappingContext(
+                persistenceContext.createQuery(query).getSingleResult(),
+                paramIndexMapping
+        ));
+    }
+
+    @Override
+    public <P> List<P> getAttributesProjectionList(List<String> attributes, Filter<T> filter, ProjectionRowMapper<P> rowMapper) {
+        return getAttributesProjectionList(attributes, filter, Sortings.unsorted(), rowMapper);
+    }
+
+    @Override
+    public <P> List<P> getAttributesProjectionList(List<String> attributes, Filter<T> filter, Sorting sorting, ProjectionRowMapper<P> rowMapper) {
+        CriteriaBuilder cb = persistenceContext.getCriteriaBuilder();
+        CriteriaQuery<Object[]> query = cb.createQuery(Object[].class);
+        Root<T> root = query.from(entityType);
+
+
+        Map<String, Integer> paramIndexMapping = new HashMap<>();
+        for (int i = 0; i < attributes.size(); i++) {
+            paramIndexMapping.put(attributes.get(i), i);
+        }
+
+        Selection<?>[] selections = new Selection[attributes.size()];
+        for (int i = 0; i < attributes.size(); i++) {
+            selections[i] = FieldExpressionCompiler.getNestedPath(root, attributes.get(i));
+        }
+
+        query.multiselect(selections);
+        query.distinct(filter.isDistinct());
+
+        Filter<T> resultFilter = getSoftDeleteSupportedFilter(filter);
+        resultFilter.setEntityType(entityType);
+
+        query.where(resultFilter.toPredicate(root, cb));
+        query.orderBy(sorting.toCriteriaOrderList(root, cb));
+
+        return persistenceContext.createQuery(query).getResultList()
+                .stream()
+                .map(data -> new ProjectionMappingContext(
+                        data,
+                        paramIndexMapping
+                ))
+                .map(rowMapper::mapRow)
+                .toList();
+    }
+
 
     private void defineSoftDeleteSupport() {
         if (this.entityType == null) {

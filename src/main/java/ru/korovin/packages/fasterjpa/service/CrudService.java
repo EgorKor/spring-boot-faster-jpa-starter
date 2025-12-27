@@ -8,6 +8,7 @@ import ru.korovin.packages.fasterjpa.exception.SoftDeleteUnsupportedException;
 import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.Pagination;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
+import ru.korovin.packages.fasterjpa.service.mapping.ProjectionRowMapper;
 
 import java.util.List;
 import java.util.Optional;
@@ -344,4 +345,12 @@ public interface CrudService<T, ID> {
      * @param id идентификатор сущности
      */
     T getReference(ID id);
+
+    <P> P getAttributesProjection(List<String> attributes, Filter<T> filter, ProjectionRowMapper<P> rowMapper);
+
+    <P> List<P> getAttributesProjectionList(List<String> attributes, Filter<T> filter, ProjectionRowMapper<P> rowMapper);
+
+    <P> List<P> getAttributesProjectionList(List<String> attributes, Filter<T> filter, Sorting sorting, ProjectionRowMapper<P> rowMapper);
+
+
 }
