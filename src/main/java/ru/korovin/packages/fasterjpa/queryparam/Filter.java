@@ -59,6 +59,9 @@ public class Filter<T> implements Specification<T> {
     private List<String> fieldWhiteList = new ArrayList<>();
     private List<String> fetchingProperties = new ArrayList<>();
 
+    private final ThreadLocal<CriteriaBuilder> cbContext = new ThreadLocal<>();
+    private final ThreadLocal<Root<T>> rootContext = new ThreadLocal<>();
+
     public Filter() {
         this.conditions = new ArrayList<>();
         determineEntityType();
@@ -160,21 +163,28 @@ public class Filter<T> implements Specification<T> {
 
     public Predicate toPredicate(Root<T> root,
                                  CriteriaBuilder cb) {
-        if (queryConfigurers.isEmpty()) {
-            configureQuery(root);
-        } else {
-            queryConfigurers.forEach(c -> c.accept(root));
-        }
-        Map<String, List<Predicate>> predicates = new HashMap<>();
-        conditions.forEach(c -> {
-            Predicate predicate = parsePredicate(c, root, cb);
-            if (predicates.containsKey(c.property())) {
-                predicates.get(c.property()).add(predicate);
+        try {
+            cbContext.set(cb);
+            rootContext.set(root);
+            if (queryConfigurers.isEmpty()) {
+                configureQuery(root);
             } else {
-                predicates.put(c.property(), new ArrayList<>(List.of(predicate)));
+                queryConfigurers.forEach(c -> c.accept(root));
             }
-        });
-        return collectPredicates(cb, predicates);
+            Map<String, List<Predicate>> predicates = new HashMap<>();
+            conditions.forEach(condition -> {
+                Predicate predicate = parsePredicate(condition);
+                if (predicates.containsKey(condition.property())) {
+                    predicates.get(condition.property()).add(predicate);
+                } else {
+                    predicates.put(condition.property(), new ArrayList<>(List.of(predicate)));
+                }
+            });
+            return collectPredicates(cb, predicates);
+        } finally {
+            cbContext.remove();
+            rootContext.remove();
+        }
     }
 
     /**
@@ -211,7 +221,7 @@ public class Filter<T> implements Specification<T> {
         return _this();
     }
 
-    public <R extends Filter<?>> R distinct(){
+    public <R extends Filter<?>> R distinct() {
         this.isDistinct = true;
         return _this();
     }
@@ -251,9 +261,9 @@ public class Filter<T> implements Specification<T> {
                 .toList().toArray(new Predicate[0]));
     }
 
-    private Predicate parsePredicate(FilterCondition filter,
-                                     Root<T> root,
-                                     CriteriaBuilder cb) {
+    private Predicate parsePredicate(FilterCondition filter) {
+        CriteriaBuilder cb = cbContext.get();
+        Root<T> root = rootContext.get();
 
         String field = filter.property();
         Object value = filter.value();
@@ -379,6 +389,12 @@ public class Filter<T> implements Specification<T> {
         if (value == null) return null;
         if (targetType == null || value.getClass().equals(targetType)) {
             return value;
+        }
+
+        if (value instanceof ValueExpression valueExpression) {
+            Root<T> root = rootContext.get();
+            CriteriaBuilder cb = cbContext.get();
+            return FieldExpressionCompiler.compileToCriteria(valueExpression.expression(), cb, root);
         }
 
         // Конвертация между числовыми типами
@@ -733,7 +749,7 @@ public class Filter<T> implements Specification<T> {
                 continue;
             }
 
-            String paramName = ((Supplier<String>)field.get(this)).get();
+            String paramName = ((Supplier<String>) field.get(this)).get();
 
             AllowedOperations allowedOperationsAnnotation = field.getAnnotation(AllowedOperations.class);
 

@@ -18,6 +18,7 @@ import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Paginations;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
+import ru.korovin.packages.fasterjpa.queryparam.filterInternal.ValueExpression;
 import ru.korovin.packages.fasterjpa.service.Joins;
 import ru.korovin.packages.fasterjpa.template.jpa.JpaEntityPropertyPatcher;
 import ru.korovin.packages.fasterjpa.testProject.model.User;
@@ -30,7 +31,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.function.Supplier;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static ru.korovin.packages.fasterjpa.queryparam.factories.Filters.fb;
 
 
@@ -215,6 +216,12 @@ public class UserServiceTests {
                 Filter.empty(), (row) -> new UserProjection(row.getLong("id"), row.getString("password")));
         System.out.println(users);
 
+    }
+
+    @Test
+    public void testEqualsExpression(){
+        List<User> list = userService.getList(Filters.equal("id", new ValueExpression("id")));
+        assertFalse(list.isEmpty());
     }
 
 
