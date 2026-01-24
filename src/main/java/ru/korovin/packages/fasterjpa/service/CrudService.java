@@ -352,5 +352,7 @@ public interface CrudService<T, ID> {
 
     <P> List<P> getAttributesProjectionList(List<String> attributes, Filter<T> filter, Sorting sorting, ProjectionRowMapper<P> rowMapper);
 
+    void clearL1Cache();
 
+    void flushQueries();
 }

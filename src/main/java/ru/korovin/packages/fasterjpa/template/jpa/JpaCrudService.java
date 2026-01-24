@@ -763,6 +763,16 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
                 .toList();
     }
 
+    @Override
+    public void clearL1Cache() {
+        persistenceContext.clear();
+    }
+
+    @Override
+    public void flushQueries() {
+        persistenceContext.flush();
+    }
+
 
     private void defineSoftDeleteSupport() {
         if (this.entityType == null) {
