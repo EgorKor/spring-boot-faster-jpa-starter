@@ -121,6 +121,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
     protected final Validator validator;
     protected final Class<T> entityType;
     protected boolean isSoftDeleteSupported;
+    protected boolean isSoftDeleteFlagAffectsQueries;
     protected Field softDeleteField;
     protected Field idField;
 
@@ -805,6 +806,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
             this.isSoftDeleteSupported = true;
             this.softDeleteField = softDeleteFields.getFirst();
             this.softDeleteField.setAccessible(true);
+            this.isSoftDeleteFlagAffectsQueries = this.softDeleteField.getAnnotation(SoftDeleteFlag.class).affectQueries();
         }
     }
 
@@ -818,7 +820,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
     }
 
     private Filter<T> getSoftDeleteSupportedFilter(@NonNull Filter<T> filter) {
-        if (!isSoftDeleteSupported) {
+        if (!isSoftDeleteSupported || !isSoftDeleteFlagAffectsQueries) {
             return filter;
         }
         boolean isDeleted = false;

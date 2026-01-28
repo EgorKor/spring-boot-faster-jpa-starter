@@ -61,4 +61,9 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface SoftDeleteFlag {
+    /**
+     * Флаг позволяющий отключить воздействие на запросы, но при этом
+     * оставить доступными операции softDelete и restore
+     * */
+    boolean affectQueries() default true;
 }
