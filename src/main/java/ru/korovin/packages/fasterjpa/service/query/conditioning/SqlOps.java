@@ -20,16 +20,16 @@ public class SqlOps {
         return "NOT (" + condition + ")";
     }
 
-    public static String notEquals(String leftExpression, String rightExpression) {
+    public static <T> String notEquals(String leftExpression, T rightExpression) {
         return leftExpression + " != " + rightExpression;
     }
 
-    public static String equals(String leftExpression, String rightExpression) {
-        return leftExpression + " = " + rightExpression;
+    public static <T> String equals(String leftExpression, T rightExpression) {
+        return leftExpression + " = " + rightExpression.toString();
     }
 
-    public static String in(String leftExpression, String rightExpression) {
-        return leftExpression + " IN " + "(" + rightExpression + ")";
+    public static <T> String in(String leftExpression, T rightExpression) {
+        return leftExpression + " IN " + "(" + rightExpression.toString() + ")";
     }
 
     public static String numbers(Collection<? extends Number> numbers) {

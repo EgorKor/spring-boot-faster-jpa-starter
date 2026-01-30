@@ -295,7 +295,7 @@ public class Filter<T> implements Specification<T> {
                 case NOT_LIKE -> cb.not(parseLikePredicate(cb, selection, value.toString()));
                 case IN -> parseInPredicate(cb, selection, reflectionField, (Collection<?>) value, function, field);
                 case NOT_IN ->
-                        cb.not(parseInPredicate(cb, selection, reflectionField, (List<Object>) value, function, field));
+                        cb.not(parseInPredicate(cb, selection, reflectionField, (Collection<?>) value, function, field));
             };
         } catch (Exception e) {
             throw new InvalidParameterException(

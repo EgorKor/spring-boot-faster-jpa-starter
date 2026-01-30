@@ -28,7 +28,9 @@ import ru.korovin.packages.fasterjpa.testProject.service.UserService;
 import ru.korovin.packages.fasterjpa.testProject.service.impl.UserServiceImpl;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -216,6 +218,13 @@ public class UserServiceTests {
                 Filter.empty(), (row) -> new UserProjection(row.getLong("id"), row.getString("password")));
         System.out.println(users);
 
+    }
+
+    @Test
+    public void testInHashSet(){
+        userService.getList(fb.and(
+                fb.notInCollection("id", new HashSet<>(Set.of(1,2,3)))
+        ));
     }
 
     @Test

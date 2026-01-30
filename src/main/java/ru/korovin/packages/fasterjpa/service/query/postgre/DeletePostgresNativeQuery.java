@@ -10,7 +10,7 @@ public class DeletePostgresNativeQuery {
     private boolean cascade;
 
     private final static String QUERY_TEMPLATE = """
-            DELETE FROM ${TABLE_NAME}
+            delete from ${TABLE_NAME}
             ${WHERE_CONDITION}
             ${CASCADE}
             """;
@@ -36,10 +36,10 @@ public class DeletePostgresNativeQuery {
 
     private String buildQuery() {
         String whereCondition = condition != null ? String.format(
-                "WHERE %s",
+                "where %s",
                 condition
         ) : "";
-        String cascade = this.cascade ? "CASCADE" : "";
+        String cascade = this.cascade ? "cascade" : "";
         if (tableName == null) {
             throw new IllegalStateException("Необходимо указать имя таблицы в запросе");
         }
