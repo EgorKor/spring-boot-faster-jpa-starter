@@ -11,33 +11,39 @@ import java.util.Map;
 public class ProjectionMappingContext {
     private Object[] data;
     private Map<String, Integer> paramIndexMapping;
+    private Long rowNumber;
 
+    /**
+     * Возвращает номер текущей строки начиная с 1
+     *
+     */
+    public Long getRowNumber() {
+        return rowNumber;
+    }
 
-    public String getString(String property){
+    public String getString(String property) {
         return getTypedPropertyValue(String.class, property);
     }
 
-    public Long getLong(String property){
+    public Long getLong(String property) {
         return getTypedPropertyValue(Long.class, property);
     }
 
-    public Integer getInt(String property){
+    public Integer getInt(String property) {
         return getTypedPropertyValue(Integer.class, property);
     }
 
-    public BigDecimal getBigDecimal(String property){
+    public BigDecimal getBigDecimal(String property) {
         return getTypedPropertyValue(BigDecimal.class, property);
     }
 
-    public LocalDateTime getDateTime(String property){
+    public LocalDateTime getDateTime(String property) {
         return getTypedPropertyValue(LocalDateTime.class, property);
     }
 
-    public Instant getInstant(String property){
+    public Instant getInstant(String property) {
         return getTypedPropertyValue(Instant.class, property);
     }
-
-
 
 
     <T> T getTypedPropertyValue(Class<T> type, String param) {

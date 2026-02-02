@@ -35,6 +35,7 @@ import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import static ru.korovin.packages.fasterjpa.queryparam.Filter.softDeleteFilter;
@@ -719,7 +720,8 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
 
         return rowMapper.mapRow(new ProjectionMappingContext(
                 persistenceContext.createQuery(query).getSingleResult(),
-                paramIndexMapping
+                paramIndexMapping,
+                1L
         ));
     }
 
@@ -754,11 +756,13 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
         query.where(resultFilter.toPredicate(root, cb));
         query.orderBy(sorting.toCriteriaOrderList(root, cb));
 
-        return persistenceContext.createQuery(query).getResultList()
-                .stream()
-                .map(data -> new ProjectionMappingContext(
-                        data,
-                        paramIndexMapping
+        List<Object[]> resultList = persistenceContext.createQuery(query).getResultList();
+        return LongStream.range(0, resultList.size())
+                .boxed()
+                .map(rowIndex -> new ProjectionMappingContext(
+                        resultList.get(rowIndex.intValue()),
+                        paramIndexMapping,
+                        rowIndex + 1
                 ))
                 .map(rowMapper::mapRow)
                 .toList();
