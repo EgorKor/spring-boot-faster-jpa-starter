@@ -28,6 +28,7 @@ import ru.korovin.packages.fasterjpa.service.mapping.ProjectionMappingContext;
 import ru.korovin.packages.fasterjpa.service.mapping.ProjectionRowMapper;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.sql.Date;
@@ -614,11 +615,21 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
                         update.set(path, sourcePath);
                     }
                 }
+                case SET_NULL -> {
+                    try {
+                        Method setMethod = update.getClass().getMethod("set", Path.class, Expression.class);
+                        Expression<?> nullLiteral = cb.nullLiteral(Object.class);
+                        setMethod.invoke(update, path, nullLiteral);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
             }
         }
         update.where(filter.toPredicate(root, cb));
         return persistenceContext.createQuery(update).executeUpdate();
     }
+
 
     @Override
     public int softDeleteByFilter(@NonNull Filter<T> filter) throws SoftDeleteUnsupportedException, EntityProcessingException {

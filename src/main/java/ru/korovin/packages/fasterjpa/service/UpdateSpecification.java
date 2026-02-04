@@ -26,7 +26,8 @@ public class UpdateSpecification {
         CONCAT,
         UPPER_CASE,
         LOWER_CASE,
-        COPY
+        COPY,
+        SET_NULL
     }
 
 
@@ -118,7 +119,7 @@ public class UpdateSpecification {
     public static class UpdateSpecificationBuilder {
 
         public UpdateUnit setNull(String field) {
-            return new UpdateUnit(field, Action.UPDATE, null);
+            return new UpdateUnit(field, Action.SET_NULL, "null");
         }
 
         public UpdateUnit updateValue(String field, Object value) {
