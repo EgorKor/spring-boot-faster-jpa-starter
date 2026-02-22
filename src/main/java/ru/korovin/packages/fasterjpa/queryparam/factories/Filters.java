@@ -18,11 +18,11 @@ public class Filters {
     }
 
     public static <T> Filter<T> contains(String field, String value) {
-        return fb.and(fb.like(field, value));
+        return fb.and(fb.contains(field, value));
     }
 
     public static <T> Filter<T> notContains(String field, String value) {
-        return fb.and(fb.notLike(field, value));
+        return fb.and(fb.notContains(field, value));
     }
 
     public static <T> Filter<T> like(String field, String value) {
