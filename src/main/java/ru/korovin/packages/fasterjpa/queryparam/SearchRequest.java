@@ -78,7 +78,7 @@ public class SearchRequest<F extends Filter<?>, S extends Sorting> {
         this.pagination = parsePagination(params);
 
         this.filter = parseFilter(params, filterClass);
-        this.filter.validateAndApplyAllies();
+        this.filter.validator().validateAndApplyAllies();
 
         this.sorting = parseSorting(params, sortingClass);
         this.sorting.validateAndApplyAllies();

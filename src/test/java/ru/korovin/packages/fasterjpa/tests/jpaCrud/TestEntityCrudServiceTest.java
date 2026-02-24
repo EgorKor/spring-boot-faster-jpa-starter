@@ -1,6 +1,7 @@
 package ru.korovin.packages.fasterjpa.tests.jpaCrud;
 
 
+import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
 import ru.korovin.packages.fasterjpa.testProject.model.TestEntity;
 import ru.korovin.packages.fasterjpa.testProject.model.TestNestedEntity;
 import ru.korovin.packages.fasterjpa.testProject.service.TestEntityService;
@@ -79,7 +80,7 @@ public class TestEntityCrudServiceTest {
                 updateValue("name", "New Name");
 
         // Act
-        int updatedCount = crudService.updateByFilter(spec, Filter.empty());
+        int updatedCount = crudService.updateByFilter(spec, Filters.empty());
         testEntityManager.flush();
         testEntityManager.clear();
         // Assert
@@ -101,7 +102,7 @@ public class TestEntityCrudServiceTest {
         UpdateSpecification spec = plus("nullableProperty", 10);
 
         // Act
-        int updatedCount = crudService.updateByFilter(spec, Filter.empty());
+        int updatedCount = crudService.updateByFilter(spec, Filters.empty());
         testEntityManager.flush();
         testEntityManager.clear();
         // Assert
@@ -123,7 +124,7 @@ public class TestEntityCrudServiceTest {
         UpdateSpecification spec = concat("name", "_Suffix");
 
         // Act
-        int updatedCount = crudService.updateByFilter(spec, Filter.empty());
+        int updatedCount = crudService.updateByFilter(spec, Filters.empty());
         testEntityManager.flush();
         testEntityManager.clear();
         // Assert
@@ -148,7 +149,7 @@ public class TestEntityCrudServiceTest {
                 toUpperCase("name");
 
         // Act
-        int updatedCount = crudService.updateByFilter(spec, Filter.empty());
+        int updatedCount = crudService.updateByFilter(spec, Filters.empty());
         testEntityManager.flush();
         testEntityManager.clear();
         // Assert
@@ -174,7 +175,7 @@ public class TestEntityCrudServiceTest {
                 copyValue("name", "copyField");
 
         // Act
-        int updatedCount = crudService.updateByFilter(spec, Filter.empty());
+        int updatedCount = crudService.updateByFilter(spec, Filters.empty());
         testEntityManager.flush();
         testEntityManager.clear();
 
@@ -203,7 +204,7 @@ public class TestEntityCrudServiceTest {
 
 
         // Act
-        int updatedCount = crudService.updateByFilter(spec, Filter.empty());
+        int updatedCount = crudService.updateByFilter(spec, Filters.empty());
         testEntityManager.flush();
         testEntityManager.clear();
         // Assert
@@ -231,7 +232,7 @@ public class TestEntityCrudServiceTest {
                 updateValue("isDeleted", true);
 
         // Act
-        int updatedCount = crudService.updateByFilter(spec, Filter.empty());
+        int updatedCount = crudService.updateByFilter(spec, Filters.empty());
         testEntityManager.flush();
         testEntityManager.clear();
         // Assert
@@ -243,7 +244,7 @@ public class TestEntityCrudServiceTest {
     @Test
     @Sql(scripts = "/insert-test-data.sql")
     void getAll_withFilterAndPagination_shouldReturnPageableResult() {
-        Filter<TestEntity> filter = Filter.empty();
+        Filter<TestEntity> filter = Filters.empty();
         Pagination pagination = new Pagination(0, 10);
 
         PageableResult<TestEntity> result = crudService.getPage(filter, pagination);
@@ -256,7 +257,7 @@ public class TestEntityCrudServiceTest {
     @Test
     @Sql(scripts = "/insert-test-data.sql")
     void getAll_withFilter_shouldReturnList() {
-        Filter<TestEntity> filter = Filter.empty();
+        Filter<TestEntity> filter = Filters.empty();
 
         List<TestEntity> result = crudService.getList(filter);
 
@@ -268,7 +269,7 @@ public class TestEntityCrudServiceTest {
     @Test
     @Sql(scripts = "/insert-test-data.sql")
     void getAll_withFilterAndSorting_shouldReturnList() {
-        Filter<TestEntity> filter = Filter.empty();
+        Filter<TestEntity> filter = Filters.empty();
         Sorting sorting = new Sorting();
         List<TestEntity> result = crudService.getList(filter, sorting);
 
@@ -413,7 +414,7 @@ public class TestEntityCrudServiceTest {
     @Test
     @Sql(scripts = "/insert-test-data.sql")
     void getStream_shouldReturnStreamOfEntities() {
-        Filter<TestEntity> filter = Filter.empty();
+        Filter<TestEntity> filter = Filters.empty();
 
         try (Stream<TestEntity> stream = crudService.getDataStream(filter)) {
             long count = stream.count();

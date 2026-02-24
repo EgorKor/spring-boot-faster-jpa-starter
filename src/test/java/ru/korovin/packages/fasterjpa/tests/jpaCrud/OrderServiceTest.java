@@ -1,5 +1,6 @@
 package ru.korovin.packages.fasterjpa.tests.jpaCrud;
 
+import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
 import ru.korovin.packages.fasterjpa.testProject.model.Order;
 import ru.korovin.packages.fasterjpa.testProject.model.User;
 import ru.korovin.packages.fasterjpa.testProject.service.OrderService;
@@ -51,7 +52,7 @@ public class OrderServiceTest {
 
     @Test
     public void testOrderNPlus1() {
-        List<Order> orders = orderService.getList(Filter.empty());
+        List<Order> orders = orderService.getList(Filters.empty());
         System.out.println(orders.size());
     }
 

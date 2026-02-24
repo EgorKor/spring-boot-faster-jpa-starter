@@ -79,11 +79,14 @@ public class JpaCrudServiceTests {
     @Test
     public void shouldThrowExceedLimitParametersCountExceptionForFilter() {
         UserFilter filter = fb.and(
-                fb.equals("id", 1),
+                fb.or(
+                        fb.equals("id", 1),
+                        fb.equals("id", 1)
+                ),
                 fb.equals("orders_name", "name")).toFilter(UserFilter.class);
         System.out.println(filter);
-        filter.applyAllies();
-        var exception = assertThrows(InvalidParameterException.class, filter::validateOperations);
+        filter.validator().applyAllies();
+        var exception = assertThrows(InvalidParameterException.class, filter.validator()::validateOperations);
         System.out.println(exception.getMessage());
     }
 
@@ -199,7 +202,7 @@ public class JpaCrudServiceTests {
     }
 
     @Test
-    public void shouldParseConcatTextBlock(){
+    public void shouldParseConcatTextBlock() {
         assertDoesNotThrow(() -> {
             testEntityService.countByFilter(
                     Filters.like("""
@@ -208,7 +211,7 @@ public class JpaCrudServiceTests {
                                 ' ',
                                 cast(id, 'text')
                             )
-                            ""","something")
+                            """, "something")
             );
         });
     }
@@ -223,28 +226,28 @@ public class JpaCrudServiceTests {
     }
 
     @Test
-    public void shouldParseMathFunctions(){
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("floor(nullableProperty)",1)));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("ceiling(nullableProperty)",1)));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("abs(nullableProperty)",1)));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("round(nullableProperty,1)",1)));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("mod(nullableProperty,1)",1)));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("sqrt(nullableProperty)",1)));
+    public void shouldParseMathFunctions() {
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("floor(nullableProperty)", 1)));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("ceiling(nullableProperty)", 1)));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("abs(nullableProperty)", 1)));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("round(nullableProperty,1)", 1)));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("mod(nullableProperty,1)", 1)));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("sqrt(nullableProperty)", 1)));
     }
 
     @Test
-    public void shouldParseStringFunctions(){
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("left(name,1)","123")));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("right(name,1)","123")));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("rpad(name,1,'*')","123")));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("lpad(name,1,'*')","123")));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("repeat(concat('abc ',name),2)","123")));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("position(name,'substring')",123)));
-        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("instr(name,'substring')",123)));
+    public void shouldParseStringFunctions() {
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("left(name,1)", "123")));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("right(name,1)", "123")));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("rpad(name,1,'*')", "123")));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("lpad(name,1,'*')", "123")));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("repeat(concat('abc ',name),2)", "123")));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("position(name,'substring')", 123)));
+        assertDoesNotThrow(() -> testEntityService.countByFilter(equal("instr(name,'substring')", 123)));
     }
 
     @Test
-    public void shouldParseDateFunctions(){
+    public void shouldParseDateFunctions() {
         assertDoesNotThrow(() -> testEntityService.countByFilter(isNotNull("current_timestamp()")));
         assertDoesNotThrow(() -> testEntityService.countByFilter(isNotNull("year(current_timestamp())")));
         assertDoesNotThrow(() -> testEntityService.countByFilter(isNotNull("month(current_timestamp())")));
@@ -276,7 +279,7 @@ public class JpaCrudServiceTests {
     }
 
     @Test
-    public void shouldParseReplace(){
+    public void shouldParseReplace() {
         System.out.println(
                 testEntityService.getList(Filters.isNotNull("replace(name,'1234','Egor')"))
         );

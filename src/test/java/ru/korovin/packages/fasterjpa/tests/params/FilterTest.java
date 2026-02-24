@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
 import ru.korovin.packages.fasterjpa.queryparam.Filter;
+import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.FilterCondition;
 import ru.korovin.packages.fasterjpa.testProject.params.UserFilter;
 
@@ -83,7 +84,7 @@ public class FilterTest {
     @Test
     void testSoftDeleteFilter_booleanField() {
         Field field = getFiltersByFieldNameField(TestEntity.class, "active");
-        Filter<TestEntity> filter = Filter.softDeleteFilter(field, true);
+        Filter<TestEntity> filter = Filters.softDeleteFilter(field, true);
 
         assertEquals(1, filter.getConditionsCount());
     }
@@ -93,10 +94,10 @@ public class FilterTest {
         UserFilter userFilter = fb.and(
                 fb.equals("orders_name", "something")
         ).toFilter(UserFilter.class);
-        assertTrue(userFilter.containsFilterWithField("orders_name"));
-        FilterCondition op1 = userFilter.findFirstFilterByName("orders_name").get();
-        userFilter.applyAllies();
-        FilterCondition op2 = userFilter.findFirstFilterByName("orders_name").get();
+        assertTrue(userFilter.searcher().containsFilterWithField("orders_name"));
+        FilterCondition op1 = userFilter.searcher().findFirstFilterByName("orders_name").get();
+        userFilter.validator().applyAllies();
+        FilterCondition op2 = userFilter.searcher().findFirstFilterByName("orders_name").get();
         assertSame(op1, op2);
     }
 
@@ -106,19 +107,19 @@ public class FilterTest {
                 fb.equals("orders_name", "something"),
                 fb.like("orders_name", "something")
         ).toFilter(UserFilter.class);
-        var ex = assertThrows(InvalidParameterException.class, userFilter::validateFields);
+        var ex = assertThrows(InvalidParameterException.class, userFilter.validator()::validateFields);
         System.out.println(ex.getMessage());
     }
 
     @Test
     void testEmptyFilter() {
-        Filter<TestEntity> filter = Filter.empty();
+        Filter<TestEntity> filter = Filters.empty();
         assertTrue(filter.isUnfiltered());
     }
 
     @Test
     void testEmptyFilterWithType() {
-        Filter<TestEntity> filter = Filter.empty(TestEntity.class);
+        Filter<TestEntity> filter = Filters.empty(TestEntity.class);
         assertTrue(filter.isUnfiltered());
         assertEquals(TestEntity.class, filter.getEntityType());
     }

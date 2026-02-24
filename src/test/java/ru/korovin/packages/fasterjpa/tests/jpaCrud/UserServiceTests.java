@@ -93,7 +93,7 @@ public class UserServiceTests {
     @Test
     public void testFindAll() {
         stats.setStatisticsEnabled(true);
-        var res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
+        var res = userService.getPage(Filters.empty(), Sortings.unsorted(), Paginations.unpaged());
         stats.setStatisticsEnabled(false);
         assertEquals(1, stats.getPrepareStatementCount());
     }
@@ -111,7 +111,7 @@ public class UserServiceTests {
     public void softDeleteByFilter() {
         stats.setStatisticsEnabled(true);
         userService.softDeleteByFilter(fb.greater("id", "30").toFilter());
-        var res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
+        var res = userService.getPage(Filters.empty(), Sortings.unsorted(), Paginations.unpaged());
         assertEquals(2, stats.getPrepareStatementCount());
         assertEquals(30, res.getData().size());
         stats.setStatisticsEnabled(false);
@@ -121,10 +121,10 @@ public class UserServiceTests {
     public void recoverByFilter() {
         stats.setStatisticsEnabled(true);
         userService.softDeleteByFilter(fb.lessOrEquals("id", "10").toFilter());
-        var res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
+        var res = userService.getPage(Filters.empty(), Sortings.unsorted(), Paginations.unpaged());
         assertEquals(res.getData().size(), 40);
         userService.restoreByFilter(fb.lessOrEquals("id", "5").toFilter());
-        res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
+        res = userService.getPage(Filters.empty(), Sortings.unsorted(), Paginations.unpaged());
         assertEquals(res.getData().size(), 45);
         assertEquals(4, stats.getPrepareStatementCount());
     }
@@ -132,7 +132,7 @@ public class UserServiceTests {
     @Test
     public void testPaginationRequest() {
         stats.setStatisticsEnabled(true);
-        List<User> users = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.of(0, 10)).getData();
+        List<User> users = userService.getPage(Filters.empty(), Sortings.unsorted(), Paginations.of(0, 10)).getData();
         stats.setStatisticsEnabled(false);
         assertEquals(2, stats.getPrepareStatementCount());
         assertEquals(10, users.size());
@@ -157,8 +157,8 @@ public class UserServiceTests {
     public void testFilterWithPagination() {
         TestFilter testFilter = new TestFilter();
         testFilter.andCondition(fb.contains("nameAlias", ""));
-        testFilter.validateFields();
-        testFilter.applyAllies();
+        testFilter.validator().validateFields();
+        testFilter.validator().applyAllies();
         userService.getPage(testFilter, Sortings.unsorted(), Paginations.of(1, 10));
     }
 
@@ -206,12 +206,12 @@ public class UserServiceTests {
     @Test
     public void testGetProjectionList(){
         List<Long> ids = userService.getAttributesProjectionList(List.of("id"),
-                Filter.empty(), (row) -> row.getLong("id"));
+                Filters.empty(), (row) -> row.getLong("id"));
         System.out.println(ids);
 
         record UserProjection(Long id, String password){}
         List<UserProjection> users = userService.getAttributesProjectionList(List.of("id", "password"),
-                Filter.empty(), (row) -> new UserProjection(row.getLong("id"), row.getString("password")));
+                Filters.empty(), (row) -> new UserProjection(row.getLong("id"), row.getString("password")));
         System.out.println(users);
 
     }

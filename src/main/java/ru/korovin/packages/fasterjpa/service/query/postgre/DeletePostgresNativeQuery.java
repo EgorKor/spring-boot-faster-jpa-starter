@@ -3,6 +3,10 @@ package ru.korovin.packages.fasterjpa.service.query.postgre;
 import jakarta.persistence.EntityManager;
 import lombok.NonNull;
 
+/**
+ * Класс описывающих нативный запрос
+ * для удаления записей в таблице
+ */
 public class DeletePostgresNativeQuery {
     private final EntityManager persistenceContext;
     private String tableName;

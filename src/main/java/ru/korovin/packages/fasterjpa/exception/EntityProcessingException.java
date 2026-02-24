@@ -1,6 +1,7 @@
 package ru.korovin.packages.fasterjpa.exception;
 
 import lombok.Getter;
+import ru.korovin.packages.fasterjpa.service.EntityOperation;
 
 /**
  * @author EgorKor

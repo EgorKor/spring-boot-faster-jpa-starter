@@ -1,15 +1,13 @@
 package ru.korovin.packages.fasterjpa.api;
 
-import ru.korovin.packages.fasterjpa.dto.EntityProcessingErrorDto;
-import ru.korovin.packages.fasterjpa.dto.GenericErrorDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-//import org.springframework.http.converter.HttpMessageNotReadableException;
-//import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import ru.korovin.packages.fasterjpa.dto.EntityProcessingErrorDto;
+import ru.korovin.packages.fasterjpa.dto.GenericErrorDto;
 import ru.korovin.packages.fasterjpa.exception.*;
 
 import java.time.Instant;
@@ -19,7 +17,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Глобальный обработчик исключений
+ * Глобальный обработчик исключений для интеграции
+ * исключений библиотеки с Spring Framework.
  *
  * @author EgorKor
  * @version 1.0
@@ -62,34 +61,12 @@ public class GenericApiControllerAdvice {
                 .build();
     }
 
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    @ExceptionHandler
-    public GenericErrorDto<Void> handleAuthenticationException(AuthenticationException e) {
-        log.warn("Ошибка аутентификации: {}", e.getMessage());
-        return GenericErrorDto.<Void>builder()
-                .code(401)
-                .message(e.getMessage())
-                .date(LocalDateTime.ofInstant(Instant.now(), ZoneId.of("UTC")).toString())
-                .build();
-    }
-
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler
     public GenericErrorDto<Void> handleTemplateProcessingException(TemplateProcessingException e) {
         log.error("Ошибка обработки шаблона: {}", e.getMessage(), e);
         return GenericErrorDto.<Void>builder()
                 .code(500)
-                .message(e.getMessage())
-                .date(LocalDateTime.ofInstant(Instant.now(), ZoneId.of("UTC")).toString())
-                .build();
-    }
-
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    @ExceptionHandler
-    public GenericErrorDto<Void> handleAccessDeniedException(AccessDeniedException e) {
-        log.warn("Ошибка отказа в доступе: {}", e.getMessage());
-        return GenericErrorDto.<Void>builder()
-                .code(403)
                 .message(e.getMessage())
                 .date(LocalDateTime.ofInstant(Instant.now(), ZoneId.of("UTC")).toString())
                 .build();
@@ -146,7 +123,7 @@ public class GenericApiControllerAdvice {
     @ExceptionHandler
     public GenericErrorDto<EntityProcessingErrorDto> handleEntityProcessingException(EntityProcessingException e) {
         String detailedMessage = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-        log.warn("Ошибка обработки сущности: {}", detailedMessage, e);
+        log.warn("Ошибка обработки сущности во время операции {}: {}", e.getOperation().getVerboseName(), detailedMessage, e);
         return GenericErrorDto.<EntityProcessingErrorDto>builder()
                 .code(400)
                 .error(new EntityProcessingErrorDto(e.getEntityType().getName(), e.getOperation(), detailedMessage))

@@ -97,6 +97,11 @@ public final class FilterCondition implements FilterConditionTreeNode {
         }
     }
 
+    @Override
+    public FilterConditionTreeNode copy() {
+        return new FilterCondition(property, operation, value);
+    }
+
     private Predicate parseEqualIgnoreCasePredicate(CriteriaBuilder cb, Expression<?> selection, String value) {
         return cb.equal(cb.lower(getTypedExpression(selection, String.class)), value.toLowerCase());
     }

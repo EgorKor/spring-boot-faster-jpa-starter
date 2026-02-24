@@ -1,7 +1,0 @@
-package ru.korovin.packages.fasterjpa.exception;
-
-public class AccessDeniedException extends RuntimeException {
-    public AccessDeniedException(String message) {
-        super(message);
-    }
-}

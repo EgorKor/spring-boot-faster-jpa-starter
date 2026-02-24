@@ -21,4 +21,9 @@ public final class FilterNotCondition implements FilterConditionTreeNode {
                 node.parsePredicate(root, criteriaQuery, criteriaBuilder, entityType)
         );
     }
+
+    @Override
+    public FilterConditionTreeNode copy() {
+        return new FilterNotCondition(node.copy());
+    }
 }

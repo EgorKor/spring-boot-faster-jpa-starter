@@ -9,27 +9,26 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Класс описывающий запрос на обновление записией
+ *
+ * @author EgorKor
+ * @version 1.0
+ * @since 2025
+ */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 public class UpdateSpecification {
-    private Map<String, UpdateUnit> updates = new HashMap<>();
+    /**
+     * Глобальный stateless update builder
+     */
     public static UpdateSpecificationBuilder ub = new UpdateSpecificationBuilder();
 
-    public enum Action {
-        UPDATE,
-        SUM,
-        MULTIPLY,
-        DIVIDE,
-        ADD_DAYS,
-        TRUNCATE_TIME,
-        CONCAT,
-        UPPER_CASE,
-        LOWER_CASE,
-        COPY,
-        SET_NULL
-    }
-
+    /**
+     * Обновления
+     */
+    private Map<String, UpdateUnit> updates = new HashMap<>();
 
     public static UpdateSpecification updateValue(String field, Object value) {
         return ub.update(ub.updateValue(field, value));
@@ -112,26 +111,26 @@ public class UpdateSpecification {
     }
 
 
-    public record UpdateUnit(String field, Action action, Object data) {
+    public record UpdateUnit(String field, UpdateAction action, Object data) {
     }
 
 
     public static class UpdateSpecificationBuilder {
 
         public UpdateUnit setNull(String field) {
-            return new UpdateUnit(field, Action.SET_NULL, "null");
+            return new UpdateUnit(field, UpdateAction.SET_NULL, "null");
         }
 
         public UpdateUnit updateValue(String field, Object value) {
-            return new UpdateUnit(field, Action.UPDATE, value);
+            return new UpdateUnit(field, UpdateAction.UPDATE, value);
         }
 
         public UpdateUnit multiply(String field, Number value) {
-            return new UpdateUnit(field, Action.MULTIPLY, value);
+            return new UpdateUnit(field, UpdateAction.MULTIPLY, value);
         }
 
         public UpdateUnit divide(String field, Number value) {
-            return new UpdateUnit(field, Action.DIVIDE, value);
+            return new UpdateUnit(field, UpdateAction.DIVIDE, value);
         }
 
         public UpdateUnit increment(String field) {
@@ -143,55 +142,55 @@ public class UpdateSpecification {
         }
 
         public UpdateUnit copyValue(String fromField, String toField) {
-            return new UpdateUnit(toField, Action.COPY, fromField);
+            return new UpdateUnit(toField, UpdateAction.COPY, fromField);
         }
 
         public UpdateUnit plus(String field, Number value) {
-            return new UpdateUnit(field, Action.SUM, value);
+            return new UpdateUnit(field, UpdateAction.SUM, value);
         }
 
         public UpdateUnit minus(String field, Float value) {
-            return new UpdateUnit(field, Action.SUM, -value);
+            return new UpdateUnit(field, UpdateAction.SUM, -value);
         }
 
         public UpdateUnit minus(String field, Double value) {
-            return new UpdateUnit(field, Action.SUM, -value);
+            return new UpdateUnit(field, UpdateAction.SUM, -value);
         }
 
         public UpdateUnit minus(String field, Byte value) {
-            return new UpdateUnit(field, Action.SUM, -value);
+            return new UpdateUnit(field, UpdateAction.SUM, -value);
         }
 
         public UpdateUnit minus(String field, Short value) {
-            return new UpdateUnit(field, Action.SUM, -value);
+            return new UpdateUnit(field, UpdateAction.SUM, -value);
         }
 
         public UpdateUnit minus(String field, Integer value) {
-            return new UpdateUnit(field, Action.SUM, -value);
+            return new UpdateUnit(field, UpdateAction.SUM, -value);
         }
 
         public UpdateUnit minus(String field, Long value) {
-            return new UpdateUnit(field, Action.SUM, -value);
+            return new UpdateUnit(field, UpdateAction.SUM, -value);
         }
 
         public UpdateUnit addDays(String field, int days) {
-            return new UpdateUnit(field, Action.ADD_DAYS, days);
+            return new UpdateUnit(field, UpdateAction.ADD_DAYS, days);
         }
 
         public UpdateUnit truncateTime(String field) {
-            return new UpdateUnit(field, Action.TRUNCATE_TIME, null);
+            return new UpdateUnit(field, UpdateAction.TRUNCATE_TIME, null);
         }
 
         public UpdateUnit concat(String field, String value) {
-            return new UpdateUnit(field, Action.CONCAT, value);
+            return new UpdateUnit(field, UpdateAction.CONCAT, value);
         }
 
         public UpdateUnit toUpperCase(String field) {
-            return new UpdateUnit(field, Action.UPPER_CASE, null);
+            return new UpdateUnit(field, UpdateAction.UPPER_CASE, null);
         }
 
         public UpdateUnit toLowerCase(String field) {
-            return new UpdateUnit(field, Action.LOWER_CASE, null);
+            return new UpdateUnit(field, UpdateAction.LOWER_CASE, null);
         }
 
         public UpdateSpecification update(UpdateUnit... updates) {

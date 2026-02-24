@@ -6,6 +6,8 @@ import lombok.Data;
 
 
 /**
+ * Универсальная DTO для представления ошибки
+ *
  * @author EgorKor
  * @version 1.0
  * @since 2025

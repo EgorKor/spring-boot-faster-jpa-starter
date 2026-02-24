@@ -7,27 +7,18 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
-import ru.korovin.packages.fasterjpa.annotations.AllowedOperations;
-import ru.korovin.packages.fasterjpa.annotations.ParamCountLimit;
-import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
-import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterBuilder;
-import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterOperation;
-import ru.korovin.packages.fasterjpa.queryparam.filter_internal.Is;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterConditionsSearcher;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterValidator;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.*;
-import ru.korovin.packages.fasterjpa.queryparam.filter_internal.visitor.*;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.visitor.FilterCountConditionsVisitor;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.visitor.FilterListConditionsVisitor;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.visitor.FilterPropertyIndexVisitor;
 import ru.korovin.packages.fasterjpa.service.Joins;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import static ru.korovin.packages.fasterjpa.queryparam.factories.Filters.fb;
-import static ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterOperation.IS;
 
 /**
  * Параметр запроса для фильтрации запрашиваемых ресурсов.
@@ -43,106 +34,128 @@ import static ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterOpe
 @Setter
 @Getter
 public class Filter<T> implements Specification<T> {
-    public static final String FILTER_NOT_FOUND_MESSAGE = "В объекте %s , не найден фильтр с именем: %s";
+    /**
+     * Класс сущности для которой происходит выборка
+     */
     protected Class<?> entityType;
+
+    /**
+     * Флаг уникальности выбираемых значений
+     */
     protected boolean isDistinct;
+
+    /**
+     * Список конфигураторов запроса, запускаются только при запуске запроса
+     */
     protected List<Consumer<Root<T>>> queryConfigurers = new ArrayList<>();
-    private Set<String> fieldWhiteList = new HashSet<>();
-    private Set<String> fetchingProperties = new HashSet<>();
 
-    private FilterConditionTreeNode filterCondition;
+    /**
+     * Множество разрешенных свойств не подлежащих проверкам и валидации.
+     * Необходим для дополнения клиентских запросов с серверной стороны без проверки
+     * этого дополнения.
+     */
+    protected Set<String> propertiesWhiteList = new HashSet<>();
 
+    /**
+     * Множество подгружаемых (через join) связей/свойств
+     */
+    protected Set<String> fetchingProperties = new HashSet<>();
+
+    /**
+     * Условие фильтрации
+     */
+    protected FilterConditionTreeNode filterCondition;
+
+    /**
+     * Карта исходных условий фильтрации до применения альясов
+     */
+    protected Map<String, Set<FilterCondition>> conditionsWithNoMappedFields;
+
+    /**
+     * Создает пустой фильтр с попыткой автоматического
+     * определения класса сущности
+     */
     public Filter() {
         this.filterCondition = new FilterEmptyCondition();
         determineEntityType();
     }
 
+    /**
+     * Создает пустой фильтр с конкретным классом сущности
+     *
+     * @param entityType класс сущности
+     */
     public Filter(Class<?> entityType) {
         this.filterCondition = new FilterEmptyCondition();
         this.entityType = entityType;
     }
 
+    /**
+     * Создает фильтр с конкретным условием
+     *
+     * @param filterCondition условие фильтрации
+     */
     public Filter(@NonNull FilterConditionTreeNode filterCondition) {
         this.filterCondition = filterCondition;
         determineEntityType();
     }
 
+    /**
+     * Создает фильтр с конкретным условием и классом сущности
+     *
+     * @param filterCondition условие фильтрации
+     * @param entityType      тип сущности
+     */
     public Filter(@NonNull FilterConditionTreeNode filterCondition,
                   @NonNull Class<?> entityType) {
         this.filterCondition = filterCondition;
         this.entityType = entityType;
     }
 
+    /**
+     * Создает копию текущего фильтра, условия также полностью копируются
+     *
+     * @return копия текущего фильтра
+     *
+     */
     @SneakyThrows
     public <R extends Filter<?>> R copy() {
         R copiedFilter = (R) this.getClass().getDeclaredConstructor().newInstance();
         copiedFilter.setEntityType(entityType);
-        copiedFilter.setFieldWhiteList(fieldWhiteList);
-        //FIXME
-        copiedFilter.setFilterCondition(filterCondition);
+        copiedFilter.setPropertiesWhiteList(propertiesWhiteList);
+        copiedFilter.setFilterCondition(filterCondition.copy());
         copiedFilter.setDistinct(isDistinct);
         return copiedFilter;
     }
 
-    public static FilterBuilder builder() {
-        return fb;
-    }
+    //region STATE_GET_METHODS
 
-    public static <T extends Filter<?>> T softDeleteFilter(Field field, boolean isDeleted) {
-        return softDeleteFilter(field.getName(), field.getType(), isDeleted);
-    }
-
-    public static <T extends Filter<?>> T softDeleteFilter(Field field, boolean isDeleted, Class<T> entityType) {
-        T softDeleteFilter = softDeleteFilter(field.getName(), field.getType(), isDeleted);
-        softDeleteFilter.setEntityType(entityType);
-        return softDeleteFilter;
-    }
-
-    public static <T extends Filter<?>> T softDeleteFilter(String fieldName, Class<?> fieldType, boolean isDeleted) {
-        T filter = (T) new Filter<>();
-        FilterCondition filterCondition;
-        if (fieldType.equals(Boolean.class) || fieldType.equals(boolean.class)) {
-            filterCondition = new FilterCondition(fieldName, IS, isDeleted);
-        } else {
-            filterCondition = new FilterCondition(fieldName, IS, isDeleted ? Is.NOT_NULL : Is.NULL);
-        }
-        filter.setFilterCondition(filterCondition);
-        return filter;
-    }
-
-    public static <T> Filter<T> empty() {
-        return new Filter<>();
-    }
-
-    public static <T> Filter<T> empty(Class<T> entityType) {
-        return new Filter<>(entityType);
-    }
-
-    private static Predicate getComparisonPredicate(CriteriaBuilder cb,
-                                                    FilterOperation operation,
-                                                    Expression<Comparable> comparableSelection,
-                                                    Comparable value) {
-        return switch (operation) {
-            case GT -> cb.greaterThan(comparableSelection, value);
-            case LS -> cb.lessThan(comparableSelection, value);
-            case GTE -> cb.greaterThanOrEqualTo(comparableSelection, value);
-            case LSE -> cb.lessThanOrEqualTo(comparableSelection, value);
-            default -> throw new InvalidParameterException("Некорректное операция сравнения: " + operation);
-        };
-    }
-
-    public static <X> Expression<X> getTypedExpression(Expression<?> expression, Class<X> type) {
-        return (Expression<X>) expression;
-    }
-
+    /**
+     * Проверка наличия условия в фильтре
+     */
     public boolean isFiltered() {
         return filterCondition != null && !(filterCondition instanceof FilterEmptyCondition);
     }
 
+    /**
+     * Проверка безусловности фильтра
+     *
+     */
     public boolean isUnfiltered() {
         return filterCondition == null || filterCondition instanceof FilterEmptyCondition;
     }
 
+
+    /**/
+    public int getConditionsCount() {
+        return filterCondition.visitWith(new FilterCountConditionsVisitor());
+    }
+
+    /**/
+    public List<FilterCondition> getConditions() {
+        return filterCondition.visitWith(new FilterListConditionsVisitor());
+    }
+    //endregion
 
     //region Criteria API Mapping
     @Override
@@ -160,24 +173,39 @@ public class Filter<T> implements Specification<T> {
         return filterCondition.parsePredicate(root, null, cb, entityType);
     }
 
-    public <R extends Filter<?>> R configureQuery(Consumer<Root<T>> queryConfigurer) {
-        queryConfigurers.add(queryConfigurer);
-        return _this();
-    }
+    //region QUERY_CONDITION_MODIFICATION_METHODS
 
-    public <R extends Filter<?>> R not(){
+    /**
+     * Метод добавления условия НЕ к текущего условию
+     * запроса
+     *
+     * @return текущий объект с измененным условием
+     */
+    public <R extends Filter<?>> R not() {
         this.filterCondition = new FilterNotCondition(
                 this.filterCondition
         );
         return _this();
     }
 
-
-
-    public <R extends Filter<?>> R andCondition(FilterConditionTreeNode conditionTreeNode){
-        return andFilter(conditionTreeNode.toFilter());
+    /**
+     * Метод объединения условия текущего фильтра
+     * и другого условия через И
+     *
+     * @param condition внешнее условие
+     * @return текущий объект с измененным условием
+     */
+    public <R extends Filter<?>> R andCondition(FilterConditionTreeNode condition) {
+        return andFilter(condition.toFilter());
     }
 
+    /**
+     * Метод объединения текущего фильтра и другого
+     * фильтра через И
+     *
+     * @param externalFilter внешний фильтр
+     * @return текущий объект с измененным условием
+     */
     public <R extends Filter<?>> R andFilter(Filter<?> externalFilter) {
         this.initializeOriginalNamesMap();
         this.filterCondition = new FilterAndCondition(
@@ -186,7 +214,7 @@ public class Filter<T> implements Specification<T> {
                         externalFilter.getFilterCondition()
                 )
         );
-        this.fieldWhiteList.addAll(
+        this.propertiesWhiteList.addAll(
                 externalFilter.getFilterCondition()
                         .visitWith(new FilterListConditionsVisitor())
                         .stream()
@@ -207,19 +235,25 @@ public class Filter<T> implements Specification<T> {
         return _this();
     }
 
-    public int getConditionsCount(){
-        return filterCondition.visitWith(new FilterCountConditionsVisitor());
+    /**
+     * Метод объединения условия текущего фильтра
+     * и другого условия через ИЛИ
+     *
+     * @param condition внешнее условие
+     * @return текущий объект с измененным условием
+     */
+    public <R extends Filter<?>> R orCondition(FilterConditionTreeNode condition) {
+        return orFilter(condition.toFilter());
     }
 
-    public List<FilterCondition> getConditions(){
-        return filterCondition.visitWith(new FilterListConditionsVisitor());
-    }
-
-    public <R extends Filter<?>> R orCondition(FilterConditionTreeNode conditionTreeNode){
-        return orFilter(conditionTreeNode.toFilter());
-    }
-
-    public <R extends Filter<?>> R orFilter(Filter<?> externalFilter){
+    /**
+     * Метод объединения текущего фильтра
+     * и внешнего фильтра через ИЛИ
+     *
+     * @param externalFilter внешний фильтр
+     * @return текущий объект с измененным условием
+     */
+    public <R extends Filter<?>> R orFilter(Filter<?> externalFilter) {
         this.initializeOriginalNamesMap();
         this.filterCondition = new FilterOrCondition(
                 List.of(
@@ -227,7 +261,7 @@ public class Filter<T> implements Specification<T> {
                         externalFilter.getFilterCondition()
                 )
         );
-        this.fieldWhiteList.addAll(
+        this.propertiesWhiteList.addAll(
                 externalFilter.getFilterCondition()
                         .visitWith(new FilterListConditionsVisitor())
                         .stream()
@@ -247,20 +281,38 @@ public class Filter<T> implements Specification<T> {
         }
         return _this();
     }
+    //endregion
 
-    private void initializeOriginalNamesMap() {
-        if (this.conditionsWithNoMappedFields == null) {
-            this.conditionsWithNoMappedFields = filterCondition.visitWith(
-                    new FilterPropertyIndexVisitor()
-            );
-        }
+    //region QUERY_CONFIGURATION
+
+    /**
+     * Метод конфигурации запроса к которому будет применен фильтр
+     *
+     * @param queryConfigurer конфигуратор запроса
+     * @return текущий объект с добавленным конфигуратором
+     */
+    public <R extends Filter<?>> R configureQuery(Consumer<Root<T>> queryConfigurer) {
+        queryConfigurers.add(queryConfigurer);
+        return _this();
     }
 
+    /**
+     * Метод установки флага уникальности выборки
+     * в запросе в котором будет применен фильтра
+     *
+     * @return текущий объект с измененным флагом уникальности выборки
+     */
     public <R extends Filter<?>> R distinct() {
         this.isDistinct = true;
         return _this();
     }
 
+    /**
+     * Метод для добавления свойства/связи которую необходимо
+     * подгрузить (через join)
+     *
+     * @return текущий объект с добавленным свойством для подгрузки
+     */
     public <R extends Filter<?>> R withFetchJoin(String fetchingProperty) {
         this.fetchingProperties.add(fetchingProperty);
         queryConfigurers.add((root) -> {
@@ -274,6 +326,12 @@ public class Filter<T> implements Specification<T> {
         return _this();
     }
 
+    /**
+     * Метод для добавления свойств/связей которую
+     * необходимо подгрузить (через join)
+     *
+     * @return текущий объект с добавленными свойствами для подгрузки
+     */
     public <R extends Filter<?>> R withFetchJoins(Joins joins) {
         this.fetchingProperties.addAll(joins.properties());
         joins.properties().forEach(fetchingProperty -> {
@@ -294,51 +352,6 @@ public class Filter<T> implements Specification<T> {
 
     //region Utility Methods
 
-    public boolean containsFilterWithField(String field) {
-        initializeOriginalNamesMap();
-        return conditionsWithNoMappedFields.containsKey(field);
-    }
-
-    public Optional<FilterCondition> findFirstFilterByName(String field) {
-        initializeOriginalNamesMap();
-        if (!containsFilterWithField(field)) {
-            return Optional.empty();
-        }
-        return conditionsWithNoMappedFields.get(field)
-                .stream()
-                .findFirst();
-    }
-
-    public FilterCondition getFirstFilterByFieldName(String field) {
-        return findFirstFilterByName(field).orElseThrow(
-                () -> new InvalidParameterException(FILTER_NOT_FOUND_MESSAGE.formatted(this, field))
-        );
-    }
-
-    public Set<FilterCondition> getFiltersByFieldName(String field) {
-        if (!containsFilterWithField(field)) {
-            throw new InvalidParameterException(FILTER_NOT_FOUND_MESSAGE.formatted(this, field));
-        }
-        return conditionsWithNoMappedFields.get(field);
-    }
-
-    public Set<FilterCondition> getFiltersByFieldName(String field, Supplier<Set<FilterCondition>> defaultValueProducer) {
-        if (!containsFilterWithField(field)) {
-            return defaultValueProducer.get();
-        }
-        return conditionsWithNoMappedFields.get(field);
-    }
-
-    private Predicate parseContainsPredicate(CriteriaBuilder cb, Expression<?> selection, String stringValue) {
-        Expression<String> stringSelection = cb.lower(getTypedExpression(selection, String.class));
-        return cb.like(stringSelection, "%" + stringValue.toLowerCase() + "%");
-    }
-
-    private Predicate parseLikePredicate(CriteriaBuilder cb, Expression<?> selection, String stringValue) {
-        Expression<String> stringPath = getTypedExpression(selection, String.class);
-        return cb.like(stringPath, stringValue);
-    }
-
     private void determineEntityType() {
         if (getClass() == Filter.class) {
             return;
@@ -357,110 +370,29 @@ public class Filter<T> implements Specification<T> {
         return (SameType) this;
     }
 
-    private Map<String, Set<FilterCondition>> conditionsWithNoMappedFields;
-
-    public void validateAndApplyAllies() {
-
-        validateFields();
-        validateOperations();
-        applyAllies();
+    public FilterValidator validator() {
+        return new FilterValidator(this, this::initializeOriginalNamesMap);
     }
 
-    @SneakyThrows
-    public void applyAllies() {
-        if (this.getClass() == Filter.class) {
-            return;
-        }
-        Field[] fields = this.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            field.setAccessible(true);
-            if (field.getType() != Supplier.class) {
-                continue;
-            }
-            String alliesName = ((Supplier<String>) field.get(this)).get();
-            String fieldName = field.getName();
-            String regexSafeFieldName = Pattern.quote(fieldName);
+    public FilterConditionsSearcher searcher() {
+        return new FilterConditionsSearcher(this, this::initializeOriginalNamesMap);
+    }
 
-            filterCondition.visitWith(new FilterIterationVisitor(
-                    (condition) -> {
-                        String beforeAlliesApply = condition.property();
-                        condition.property(beforeAlliesApply.replaceFirst(regexSafeFieldName, alliesName));
-                    }
-            ));
+    private void initializeOriginalNamesMap() {
+        if (this.conditionsWithNoMappedFields == null) {
+            this.conditionsWithNoMappedFields = filterCondition.visitWith(
+                    new FilterPropertyIndexVisitor()
+            );
         }
     }
 
-    public void validateFields() {
-        if (this.getClass() == Filter.class) {
-            return;
-        }
-        int conditionsCount = filterCondition.visitWith(
-                new FilterCountConditionsVisitor()
-        );
-
-        ParamCountLimit limit;
-        if ((limit = this.getClass().getAnnotation(ParamCountLimit.class)) != null
-                && limit.value() != ParamCountLimit.UNLIMITED
-                && conditionsCount > limit.value()) {
-            throw new InvalidParameterException("Недопустимое общее кол-во фильтров: " + conditionsCount
-                    + ". Допустимое значение: " + limit.value());
-        }
-        initializeOriginalNamesMap();
-        Set<String> paramsNames = new HashSet<>(conditionsWithNoMappedFields.keySet());
-
-        Field[] declaredFields = this.getClass().getDeclaredFields();
-        Set<String> allowedFields = Arrays.stream(declaredFields)
-                .map(f -> {
-                    String paramName = f.getName();
-
-                    ParamCountLimit paramLimit = f.getAnnotation(ParamCountLimit.class);
-                    if (paramLimit != null && containsFilterWithField(paramName)
-                            && getFiltersByFieldName(paramName, Set::of).size() > paramLimit.value()) {
-                        throw new InvalidParameterException("Недопустимое кол-во фильтров для параметра %s: "
-                                .formatted(paramName) + conditionsCount + ". Допустимое значение: " + paramLimit.value());
-                    }
-                    return paramName;
-                })
-                .collect(Collectors.toSet());
-
-        paramsNames.removeAll(allowedFields);
-        fieldWhiteList.forEach(paramsNames::remove);
-        if (!paramsNames.isEmpty()) {
-            throw new InvalidParameterException("Недопустимые параметры фильтрации: " + paramsNames);
-        }
-    }
-
-
-    @SneakyThrows
-    public void validateOperations() {
-        if (this.getClass() == Filter.class) {
-            return;
-        }
-        Map<String, Set<FilterOperation>> index = filterCondition.visitWith(new FilterOperationIndexVisitor());
-        Field[] fields = this.getClass().getDeclaredFields();
-
-        for (Field field : fields) {
-            field.setAccessible(true);
-            if (!field.isAnnotationPresent(AllowedOperations.class)) {
-                continue;
-            }
-
-            String paramName = ((Supplier<String>) field.get(this)).get();
-
-            AllowedOperations allowedOperationsAnnotation = field.getAnnotation(AllowedOperations.class);
-
-            if (index.containsKey(paramName)) {
-                Set<FilterOperation> usedOperations = index.get(paramName);
-                Set<FilterOperation> allowedOperations = Arrays.stream(allowedOperationsAnnotation.value())
-                        .collect(Collectors.toSet());
-
-                for (FilterOperation usedOp : usedOperations) {
-                    if (!allowedOperations.contains(usedOp)) {
-                        throw new InvalidParameterException("Недопустимая операция " + usedOp + " для параметра " + field.getName());
-                    }
-                }
-            }
-        }
+    /**
+     * Метод определения вызывает ли текущий
+     * метод объект класса наследника
+     *
+     */
+    public boolean isCalledByInheritor() {
+        return this.getClass() == Filter.class;
     }
 
     //endregion

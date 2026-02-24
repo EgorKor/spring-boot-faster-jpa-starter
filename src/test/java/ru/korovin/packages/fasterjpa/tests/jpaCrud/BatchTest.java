@@ -3,6 +3,7 @@ package ru.korovin.packages.fasterjpa.tests.jpaCrud;
 import jakarta.persistence.EntityManager;
 import org.springframework.boot.test.context.SpringBootTest;
 import ru.korovin.packages.fasterjpa.AutoConfigurationSource;
+import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
 import ru.korovin.packages.fasterjpa.testProject.model.TestingEntityBatching;
 import ru.korovin.packages.fasterjpa.testProject.service.BatchTestEntityService;
 import ru.korovin.packages.fasterjpa.testProject.service.impl.BatchTestEntityServiceImpl;
@@ -153,7 +154,7 @@ public class BatchTest {
         assertThrows(BatchOperationException.class, () -> {
             service.batchCreateAtomic(entities);
         });
-        service.getList(Filter.empty());
+        service.getList(Filters.empty());
         entityManager.clear();
 
         // Verify no entities were persisted

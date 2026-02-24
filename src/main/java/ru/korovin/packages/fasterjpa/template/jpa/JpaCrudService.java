@@ -14,16 +14,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.transaction.support.TransactionTemplate;
 import ru.korovin.packages.fasterjpa.annotations.SoftDeleteFlag;
-import ru.korovin.packages.fasterjpa.exception.*;
+import ru.korovin.packages.fasterjpa.exception.EntityProcessingException;
+import ru.korovin.packages.fasterjpa.exception.ResourceNotFoundException;
+import ru.korovin.packages.fasterjpa.exception.SoftDeleteUnsupportedException;
+import ru.korovin.packages.fasterjpa.exception.ValidationException;
 import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.Pagination;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
+import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FieldExpressionCompiler;
-import ru.korovin.packages.fasterjpa.service.CrudService;
-import ru.korovin.packages.fasterjpa.service.Joins;
-import ru.korovin.packages.fasterjpa.service.PageableResult;
-import ru.korovin.packages.fasterjpa.service.UpdateSpecification;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.FilterCondition;
+import ru.korovin.packages.fasterjpa.service.*;
 import ru.korovin.packages.fasterjpa.service.mapping.ProjectionMappingContext;
 import ru.korovin.packages.fasterjpa.service.mapping.ProjectionRowMapper;
 
@@ -39,8 +41,8 @@ import java.util.function.Supplier;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
-import static ru.korovin.packages.fasterjpa.queryparam.Filter.softDeleteFilter;
 import static ru.korovin.packages.fasterjpa.queryparam.factories.Filters.equal;
+import static ru.korovin.packages.fasterjpa.queryparam.factories.Filters.softDeleteFilter;
 import static ru.korovin.packages.fasterjpa.service.UpdateSpecification.updateValue;
 
 
@@ -212,12 +214,12 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
 
     @Override
     public T getById(@NonNull ID id,
-                     @NonNull Joins joins) throws ResourceNotFoundException {
+                     @NonNull Joins fetchingProperties) throws ResourceNotFoundException {
         Supplier<ResourceNotFoundException> exceptionSupplier = () ->
                 new ResourceNotFoundException(getResourceNotFoundMessage(id));
         Filter<T> baseIdFilter = equal(idField.getName(), id);
         Filter<T> resultIdFilter = getSoftDeleteSupportedFilter(baseIdFilter);
-        joins.properties().forEach(resultIdFilter::withFetchJoin);
+        fetchingProperties.properties().forEach(resultIdFilter::withFetchJoin);
 
         resultIdFilter.setEntityType(entityType);
         return specificationExecutor.findOne(resultIdFilter)
@@ -233,10 +235,10 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
     @Override
     public T getById(@NonNull ID id,
                      @NonNull LockModeType lockType,
-                     @NonNull Joins properties) throws ResourceNotFoundException {
+                     @NonNull Joins fetchingProperties) throws ResourceNotFoundException {
         Filter<T> idFilter = equal(idField.getName(), id);
         idFilter.setEntityType(entityType);
-        properties.properties().forEach(idFilter::withFetchJoin);
+        fetchingProperties.properties().forEach(idFilter::withFetchJoin);
         return getByFilterWithLock(idFilter, lockType);
     }
 
@@ -269,17 +271,17 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
 
     @Override
     public List<T> getList() {
-        return getList(Filter.empty());
+        return getList(Filters.empty(entityType));
     }
 
     @Override
     public List<T> getList(Joins joins) {
-        return getList(Filter.empty().withFetchJoins(joins));
+        return getList(Filters.empty(entityType).withFetchJoins(joins));
     }
 
     @Override
     public Stream<T> getDataStream() {
-        return getDataStream(Filter.empty());
+        return getDataStream(Filters.empty(entityType));
     }
 
     @Override
@@ -458,7 +460,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
     @Override
     public long deleteAll() throws EntityProcessingException {
         try {
-            return deleteByFilter(Filter.empty(entityType));
+            return deleteByFilter(Filters.empty(entityType));
         } catch (Exception e) {
             throw new EntityProcessingException("Ошибка удаления всех сущностей " + getEntityTypeName(), e, entityType, EntityOperation.DELETE);
         }
@@ -483,7 +485,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
     @Override
     public long countAll() {
         return !isSoftDeleteSupported ? repository.count() :
-                countByFilter(getSoftDeleteSupportedFilter(Filter.empty()));
+                countByFilter(getSoftDeleteSupportedFilter(Filters.empty(entityType)));
     }
 
     @Override
@@ -527,7 +529,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
 
     @Override
     public int softDeleteAll() throws SoftDeleteUnsupportedException, EntityProcessingException {
-        return softDeleteByFilter(Filter.empty(entityType));
+        return softDeleteByFilter(Filters.empty(entityType));
     }
 
     @Override
@@ -548,19 +550,19 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
                 case UPDATE -> update.set(path, pair.data());
                 case SUM -> {
                     if (pair.data() instanceof Number number) {
-                        Object sumExpr = cb.sum(Filter.getTypedExpression(path, Number.class), number);
+                        Object sumExpr = cb.sum(FilterCondition.getTypedExpression(path, Number.class), number);
                         update.set(path, sumExpr);
                     }
                 }
                 case MULTIPLY -> {
                     if (pair.data() instanceof Number number) {
-                        Object prodExpr = cb.prod(Filter.getTypedExpression(path, Number.class), number);
+                        Object prodExpr = cb.prod(FilterCondition.getTypedExpression(path, Number.class), number);
                         update.set(path, prodExpr);
                     }
                 }
                 case DIVIDE -> {
                     if (pair.data() instanceof Number number) {
-                        Object quotExpr = cb.quot(Filter.getTypedExpression(path, Number.class), number);
+                        Object quotExpr = cb.quot(FilterCondition.getTypedExpression(path, Number.class), number);
                         update.set(path, quotExpr);
                     }
                 }
@@ -671,7 +673,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
 
     @Override
     public void restoreAll() throws SoftDeleteUnsupportedException, EntityProcessingException {
-        restoreByFilter(Filter.empty(entityType));
+        restoreByFilter(Filters.empty(entityType));
     }
 
     @Override

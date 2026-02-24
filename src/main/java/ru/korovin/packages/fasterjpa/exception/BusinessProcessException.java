@@ -3,6 +3,13 @@ package ru.korovin.packages.fasterjpa.exception;
 import lombok.Getter;
 import lombok.NonNull;
 
+/**
+ * Исключение бизнес процесса
+ *
+ * @author EgorKor
+ * @version 1.0
+ * @since 2026
+ */
 @Getter
 public class BusinessProcessException extends RuntimeException {
     private final Class<?> businessProcess;

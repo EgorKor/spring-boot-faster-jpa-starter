@@ -15,34 +15,18 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * Интерфейс базового CRUD параметризованного сервиса
- * <p>
- * Методы
- *     <ul>
- *         <li>{@link #getPage(Filter, Sorting, Pagination)}</li>
- *         <li>{@link #getById(ID)}</li>
- *         <li>{@link #getById(ID, LockModeType)}</li>
- *         <li>{@link #getByFilter(Filter)}</li>
- *         <li>{@link #getByFilterWithLock(Filter, LockModeType)}</li>
- *         <li>{@link #create(T)}</li>
- *         <li>{@link #fullUpdate(T)}</li>
- *         <li>{@link #patchUpdate(ID, T)}</li>
- *         <li>{@link #deleteAll()}</li>
- *         <li>{@link #deleteById(ID)}</li>
- *         <li>{@link #deleteByFilter(Filter)}</li>
- *         <li>{@link #countAll()}</li>
- *         <li>{@link #countByFilter(Filter)}</li>
- *         <li>{@link #existsById(ID)}</li>
- *         <li>{@link #existsByFilter(Filter)}</li>
- *         <li>{@link #softDeleteById(ID)}</li>
- *         <li>{@link #softDeleteByFilter(Filter)}</li>
- *         <li>{@link #softDeleteAll()}</li>
- *         <li>{@link #restoreById(ID)}</li>
- *         <li>{@link #restoreByFilter(Filter)}</li>
- *         <li>{@link #restoreAll()}</li>
- *     </ul>
- * </p>
+ * Интерфейс базового CRUD параметризованного сервиса. Предоставляет
+ * удобный и широкий набор операций для работы с СУБД:<p>
+ * 1. Выборка данных - с фильтрацией, пагинацией, сортировкой;<p>
+ * 2. Обновление данных - полное (full) и частичное (patch);<p>
+ * 3. Создание записи;<p>
+ * 4. Физическое удаление;<p>
+ * 5. Мягкое удаление;<p>
+ * 6. Выборка отдельных атрибутов;<p>
+ * 7. Подсчет кол-ва записей;<p>
  *
+ * @param <T>  Тип сущности
+ * @param <ID> Тип идентификатора
  * @author EgorKor
  * @version 1.0
  * @since 2025
@@ -76,6 +60,12 @@ public interface CrudService<T, ID> {
      */
     List<T> getList();
 
+    /**
+     * Запрос на получение полного списка сущностей с
+     * присоединением указанных связей
+     *
+     * @return List типа T - результат запроса к БД, содержащий данные
+     */
     List<T> getList(Joins joins);
 
     /**
@@ -134,20 +124,31 @@ public interface CrudService<T, ID> {
      */
     T getById(ID id) throws ResourceNotFoundException;
 
-
+    /**
+     * Запрос на получение записи по идентификатору
+     *
+     * @param id идентификатор сущности
+     * @return Optional обертка над записью
+     */
     Optional<T> findById(ID id);
 
     /**
      * Запрос на получение сущности по идентификатору
      *
-     * @param id идентификатор сущности
+     * @param id                 идентификатор сущности
+     * @param fetchingProperties присоединяемые свойства/связи при запросе
      * @return объект T - сущность найденная по id
      * @throws ResourceNotFoundException в случае отсутствия в БД сущности с таким id
      */
-    T getById(ID id, Joins properties) throws ResourceNotFoundException;
+    T getById(ID id, Joins fetchingProperties) throws ResourceNotFoundException;
 
     /**
-     * Запрос на получение сущности по идентификатору
+     * Запрос на получение сущности по идентификатору. Оборачивает
+     * результат в Optional для контроля обработки отсутствия значения на клиентской стороне.
+     *
+     * @param id                 идентификатор сущности
+     * @param fetchingProperties присоединяемые свойства/связи при запросе
+     * @return Optional обертка над записью
      */
     Optional<T> findById(ID id, Joins fetchingProperties);
 
@@ -162,10 +163,34 @@ public interface CrudService<T, ID> {
      */
     T getById(ID id, LockModeType lockType) throws ResourceNotFoundException;
 
+    /**
+     * Запрос на получение сущности по идентификатору и блокировкой записи
+     *
+     * @param id       идентификатор сущности
+     * @param lockType тип блокировки
+     * @return Optional обертка над записью
+     */
     Optional<T> findById(ID id, LockModeType lockType);
 
-    T getById(ID id, LockModeType lockType, Joins properties) throws ResourceNotFoundException;
+    /**
+     * Запрос на получение сущности по идентификатору
+     *
+     * @param id                 идентификатор сущности
+     * @param lockType           тип блокировки
+     * @param fetchingProperties присоединяемые свойства/связи
+     * @return запись из БД
+     * @throws ResourceNotFoundException если запись не найдена
+     */
+    T getById(ID id, LockModeType lockType, Joins fetchingProperties) throws ResourceNotFoundException;
 
+    /**
+     * Запрос на получение сущности по идентификатору
+     *
+     * @param id                 идентификатор сущности
+     * @param lockType           тип блокировки
+     * @param fetchingProperties присоединяемые свойства/связи
+     * @return Optional обертка над записью
+     */
     Optional<T> findById(ID id, LockModeType lockType, Joins fetchingProperties);
 
     /**
@@ -179,6 +204,9 @@ public interface CrudService<T, ID> {
      */
     T getByFilter(Filter<T> filter) throws ResourceNotFoundException, NonUniqueResultException;
 
+    /**
+     *
+     */
     Optional<T> findByFilter(Filter<T> filter);
 
     /**
@@ -193,6 +221,13 @@ public interface CrudService<T, ID> {
      */
     T getByFilterWithLock(Filter<T> filter, LockModeType lockType) throws ResourceNotFoundException;
 
+    /**
+     * Запрос на получение записи по фильтру с блокировкой
+     *
+     * @param filter фильтр выборки
+     * @param lockType тип блокировки
+     * @return Optional обертка над записью
+     */
     Optional<T> findByFilterWithLock(Filter<T> filter, LockModeType lockType);
 
     /**
@@ -247,7 +282,7 @@ public interface CrudService<T, ID> {
     /**
      * Физическое удаление всех сущностей
      *
-     * @return
+     * @return количество удаленных записей
      */
     long deleteAll() throws EntityProcessingException;
 
@@ -255,7 +290,7 @@ public interface CrudService<T, ID> {
      * Физическое удаление всех сущностей с учётом фильтрации
      *
      * @param filter параметр запроса фильтрации
-     * @return
+     * @return количество удаленных записей
      */
     long deleteByFilter(Filter<T> filter) throws EntityProcessingException;
 
@@ -302,7 +337,7 @@ public interface CrudService<T, ID> {
     /**
      * Мягкое удаление всех сущностей
      *
-     * @return
+     * @return количество обновлений
      * @throws SoftDeleteUnsupportedException если сущность не поддерживает мягкое удаление
      */
     int softDeleteAll() throws SoftDeleteUnsupportedException, EntityProcessingException;
@@ -341,18 +376,56 @@ public interface CrudService<T, ID> {
 
     /**
      * Получение ссылки на объект БД без загрузки объекта
+     * и проверки существования записи в БД.
      *
      * @param id идентификатор сущности
+     * @return ссылка на сущность
      */
     T getReference(ID id);
 
+    /**
+     * Получение проекции через выборку определенных атрибутов
+     *
+     * @param <P>        тип проекции
+     * @param attributes список наименований атрибутов выборки
+     * @param filter     фильтр выборки
+     * @param rowMapper  функция преобразователь результата выборки в проекцию
+     * @return одна запись типа P
+     */
     <P> P getAttributesProjection(List<String> attributes, Filter<T> filter, ProjectionRowMapper<P> rowMapper);
 
+    /**
+     * Получение проекции через выборку определенных атрибутов
+     *
+     * @param <P>        тип проекции
+     * @param attributes список наименований атрибутов выборки
+     * @param filter     фильтр выборки
+     * @param rowMapper  функция преобразователь результата выборки в проекцию
+     * @return список записей типа P
+     */
     <P> List<P> getAttributesProjectionList(List<String> attributes, Filter<T> filter, ProjectionRowMapper<P> rowMapper);
 
+    /**
+     * Получение проекции через выборку определенных атрибутов
+     *
+     * @param <P>        тип проекции
+     * @param attributes список наименований атрибутов выборки
+     * @param filter     фильтр выборки
+     * @param sorting    сортировка выборки
+     * @param rowMapper  функция преобразователь результата выборки в проекцию
+     * @return список записей типа P
+     */
     <P> List<P> getAttributesProjectionList(List<String> attributes, Filter<T> filter, Sorting sorting, ProjectionRowMapper<P> rowMapper);
 
+    /**
+     * Очистка кэша первого уровня. Перед очисткой выполняйте
+     * flushQueries чтобы не потерять изменения.
+     */
     void clearL1Cache();
 
+    /**
+     * Отправка накопленных изменений в виде запросов
+     * непосредственно в БД.
+     */
     void flushQueries();
 }

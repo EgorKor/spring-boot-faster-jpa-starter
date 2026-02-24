@@ -1,6 +1,8 @@
 package ru.korovin.packages.fasterjpa.exception;
 
 /**
+ * Исключение отсутствия поддержки операции мягкого удаления
+ *
  * @author EgorKor
  * @version 1.0
  * @since 2025

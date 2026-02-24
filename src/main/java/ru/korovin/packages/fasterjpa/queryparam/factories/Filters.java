@@ -3,12 +3,38 @@ package ru.korovin.packages.fasterjpa.queryparam.factories;
 import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterBuilder;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.Is;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.FilterCondition;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.FilterConditionTreeNode;
 
+import java.lang.reflect.Field;
 import java.util.Collection;
+
+import static ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterOperation.IS;
 
 public class Filters {
     public final static FilterBuilder fb = new FilterBuilder();
+
+    public static <T extends Filter<?>> T softDeleteFilter(Field field, boolean isDeleted) {
+        return softDeleteFilter(field.getName(), field.getType(), isDeleted);
+    }
+
+    public static <T extends Filter<?>> T softDeleteFilter(Field field, boolean isDeleted, Class<T> entityType) {
+        T softDeleteFilter = softDeleteFilter(field.getName(), field.getType(), isDeleted);
+        softDeleteFilter.setEntityType(entityType);
+        return softDeleteFilter;
+    }
+
+    public static <T extends Filter<?>> T softDeleteFilter(String fieldName, Class<?> fieldType, boolean isDeleted) {
+        T filter = (T) new Filter<>();
+        FilterCondition filterCondition;
+        if (fieldType.equals(Boolean.class) || fieldType.equals(boolean.class)) {
+            filterCondition = new FilterCondition(fieldName, IS, isDeleted);
+        } else {
+            filterCondition = new FilterCondition(fieldName, IS, isDeleted ? Is.NOT_NULL : Is.NULL);
+        }
+        filter.setFilterCondition(filterCondition);
+        return filter;
+    }
 
     public static <T> Filter<T> of(FilterConditionTreeNode condition){
         return new Filter<>();
@@ -39,7 +65,11 @@ public class Filters {
     }
 
     public static <T> Filter<T> empty() {
-        return Filter.empty();
+        return new Filter<>();
+    }
+
+    public static <T> Filter<T> empty(Class<T> entityType) {
+        return new Filter<>(entityType);
     }
 
     public static <T> Filter<T> isNull(String field) {

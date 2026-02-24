@@ -1,6 +1,8 @@
 package ru.korovin.packages.fasterjpa.exception;
 
 /**
+ * Исключения пакетной обработки данных
+ *
  * @author EgorKor
  * @version 1.0
  * @since 2025

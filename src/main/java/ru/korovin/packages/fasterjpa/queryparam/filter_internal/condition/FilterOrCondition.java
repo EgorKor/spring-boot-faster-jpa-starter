@@ -4,7 +4,6 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -27,6 +26,15 @@ public final class FilterOrCondition implements FilterConditionTreeNode {
                 nodes.stream()
                         .map(n -> n.parsePredicate(root, criteriaQuery, criteriaBuilder, entityType))
                         .toArray(Predicate[]::new)
+        );
+    }
+
+    @Override
+    public FilterConditionTreeNode copy() {
+        return new FilterOrCondition(
+                nodes.stream()
+                        .map(FilterConditionTreeNode::copy)
+                        .toList()
         );
     }
 }

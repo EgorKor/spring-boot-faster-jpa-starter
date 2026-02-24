@@ -8,6 +8,8 @@ import java.util.*;
 
 
 /**
+ * Исключение валидации сущности/dto/request
+ *
  * @author EgorKor
  * @version 1.0
  * @since 2025

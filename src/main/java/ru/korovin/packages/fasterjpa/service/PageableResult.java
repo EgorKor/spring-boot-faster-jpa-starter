@@ -20,6 +20,8 @@ import java.util.function.Function;
  *     }
  * </pre>
  *
+ * @param <T> Тип записей в обертке
+ *
  * @author EgorKor
  * @version 1.0
  * @since 2025
@@ -28,27 +30,79 @@ import java.util.function.Function;
 @AllArgsConstructor
 @ToString
 public class PageableResult<T> {
+    /**
+     * Данные полученные в результате запроса
+     */
     private List<T> data;
+
+    /**
+     * Общее кол-ва записей без разбиения на страницы
+     */
     private long count;
+
+    /**
+     * Общее кол-во страниц заданного размера
+     */
     private long pageCount;
+
+    /**
+     * Размер страницы
+     */
     private long pageSize;
 
+    /**
+     * Создает объект обертки на основе объекта {@link Page}
+     * @param page результат запроса к БД
+     * @return PageableResult - обертка над страницей результатом запроса к БД
+     */
     public static <T> PageableResult<T> of(Page<T> page) {
         return of(page.stream().toList(), page.getTotalElements(), page.getTotalPages(), page.getSize());
     }
 
+    /**
+     * Создает объект обертки используя конструктор со всеми параметрами
+     *
+     * @param data результат запроса к БД
+     * @param totalElements всего элементов удовлетворяющих запросу без пагинации
+     * @param pageCount кол-во страниц
+     * @param pageSize размер страницы
+     * @return PageableResult - обертка над страницей результатом запроса к БД
+     */
     public static <T> PageableResult<T> of(List<T> data, long totalElements, long pageCount, long pageSize) {
         return new PageableResult<>(data, totalElements, pageCount, pageSize);
     }
 
-    public static <T> PageableResult<T> of(List<T> data, long count, long pageSize) {
-        return new PageableResult<>(data, count, countPages(count, pageSize), pageSize);
+    /**
+     * Создает объект обертки используя конструктор и метод расчета кол-ва страниц
+     * исходя из кол-ва элементов и размера страницы
+     *
+     * @param data результат запроса к БД
+     * @param totalElements всего элементов удовлетворяющих запросу без пагинации
+     * @param pageSize размер страницы
+     * @return PageableResult - обертка над страницей результатом запроса к БД
+     */
+    public static <T> PageableResult<T> of(List<T> data, long totalElements, long pageSize) {
+        return new PageableResult<>(data, totalElements, countPages(totalElements, pageSize), pageSize);
     }
 
-    public static int countPages(long count, long pageSize) {
-        return (int) Math.ceil((double) count / pageSize);
+    /**
+     * Рассчитывает кол-во страниц исходя из общего кол-ва
+     * элементов и размера страницы
+     *
+     * @param totalElements всего элементов
+     * @param pageSize размер страницы
+     * @return кол-во страниц с учетом деления с остатком и округления вверх
+     */
+    public static long countPages(long totalElements, long pageSize) {
+        return Math.ceilDiv(totalElements, pageSize);
     }
 
+    /**
+     * Преобразует все элементы данных обертки используя функцию маппер
+     *
+     * @param mapper функция преобразователь содержимого
+     * @return PageableResult копия обертки с преобразованными элементами данными
+     */
     public <R> PageableResult<R> map(Function<? super T, R> mapper) {
         return new PageableResult<>(data.stream().map(mapper).toList(), count, pageCount, pageSize);
     }

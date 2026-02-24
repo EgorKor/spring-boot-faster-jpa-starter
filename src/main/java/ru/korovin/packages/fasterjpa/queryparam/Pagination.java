@@ -14,8 +14,9 @@ import static ru.korovin.packages.fasterjpa.queryparam.factories.Paginations.*;
  * Параметр запроса для пагинации запрашиваемых ресурсов.
  * Пример использования в контроллере:
  * <pre>{@code
- * public void controllerMethod(@RequestParam Pagination pagination)
+ * public void controllerMethod(@ModelAttribute Pagination pagination)
  * }</pre>
+ * <p>
  * Пример использования с JPA репозиториями сортировка и пагинация
  * <pre>
  * {@code
@@ -26,7 +27,7 @@ import static ru.korovin.packages.fasterjpa.queryparam.factories.Paginations.*;
  * </pre>
  *
  * @author EgorKor
- * @since 2025
+ * @since 2026
  */
 @Data
 @AllArgsConstructor
@@ -38,14 +39,22 @@ public class Pagination {
     private int page = DEFAULT_PAGE;
     private int size = DEFAULT_PAGE_SIZE;
 
-    //state checking methods
+    //region state checking methods
+
+    /**
+     * Метод для проверки
+     */
     public boolean isUnpaged() {
         return size == ALL_CONTENT_SIZE;
     }
 
+    /**
+     *
+     */
     public boolean isPaged() {
         return size != ALL_CONTENT_SIZE;
     }
+    //endregion
 
     //transform methods
     public Pageable toJpaPageable() {
@@ -83,7 +92,7 @@ public class Pagination {
         if (maxSize <= 0) {
             throw new IllegalArgumentException(ILLEGAL_SIZE_CONSTRAINT_VALUE_MESSAGE);
         }
-        if(this.size > maxSize){
+        if (this.size > maxSize) {
             throw new IllegalStateException(String.format(MAX_CONSTRAINT_VIOLATION_MESSAGE, this.size, maxSize));
         }
         return this;
@@ -93,7 +102,7 @@ public class Pagination {
         if (minSize <= 0) {
             throw new IllegalStateException(ILLEGAL_SIZE_CONSTRAINT_VALUE_MESSAGE);
         }
-        if(this.size < minSize){
+        if (this.size < minSize) {
             throw new IllegalStateException(String.format(MAX_CONSTRAINT_VIOLATION_MESSAGE, this.size, minSize));
         }
         return this;

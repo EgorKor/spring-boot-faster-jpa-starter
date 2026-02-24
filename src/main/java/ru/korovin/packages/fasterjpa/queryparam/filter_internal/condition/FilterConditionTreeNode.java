@@ -9,6 +9,18 @@ import ru.korovin.packages.fasterjpa.queryparam.Filter;
 
 import java.util.List;
 
+/**
+ * Интерфейс представляющий абстрактное условие
+ * в рамках фильтрации при запросе к БД.
+ *
+ * @author EgorKor
+ * @since 2026
+ * @see FilterAndCondition
+ * @see FilterOrCondition
+ * @see FilterNotCondition
+ * @see FilterNotCondition
+ *
+ */
 public sealed interface FilterConditionTreeNode permits FilterAndCondition, FilterCondition, FilterEmptyCondition, FilterNotCondition, FilterOrCondition {
     Predicate parsePredicate(Root<?> root, CriteriaQuery<?> criteriaQuery, CriteriaBuilder criteriaBuilder, Class<?> entityType);
 
@@ -23,15 +35,15 @@ public sealed interface FilterConditionTreeNode permits FilterAndCondition, Filt
         };
     }
 
-    default FilterConditionTreeNode and(FilterConditionTreeNode node){
+    default FilterConditionTreeNode and(FilterConditionTreeNode node) {
         return new FilterAndCondition(List.of(this, node));
     }
 
-    default FilterConditionTreeNode or(FilterConditionTreeNode node){
+    default FilterConditionTreeNode or(FilterConditionTreeNode node) {
         return new FilterOrCondition(List.of(this, node));
     }
 
-    default FilterConditionTreeNode not(){
+    default FilterConditionTreeNode not() {
         return new FilterNotCondition(this);
     }
 
@@ -40,10 +52,12 @@ public sealed interface FilterConditionTreeNode permits FilterAndCondition, Filt
     }
 
     @SneakyThrows
-    default <T extends Filter<?>> T toFilter(Class<T> entityType) {
-        T filter = entityType.getDeclaredConstructor().newInstance();
-        filter.setEntityType(entityType);
+    default <T extends Filter<?>> T toFilter(Class<?> filterClass) {
+        T filter = (T) filterClass.getDeclaredConstructor().newInstance();
+        filter.setEntityType(filterClass);
         filter.setFilterCondition(this);
         return filter;
     }
+
+    FilterConditionTreeNode copy();
 }

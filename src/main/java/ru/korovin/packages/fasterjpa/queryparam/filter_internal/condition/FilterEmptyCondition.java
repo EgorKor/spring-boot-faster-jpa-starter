@@ -5,7 +5,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 
-public final class FilterEmptyCondition implements FilterConditionTreeNode{
+public final class FilterEmptyCondition implements FilterConditionTreeNode {
 
     @Override
     public Predicate parsePredicate(Root<?> root, CriteriaQuery<?> criteriaQuery, CriteriaBuilder criteriaBuilder, Class<?> entityType) {
@@ -13,5 +13,10 @@ public final class FilterEmptyCondition implements FilterConditionTreeNode{
                 criteriaBuilder.literal(1),
                 criteriaBuilder.literal(1)
         );
+    }
+
+    @Override
+    public FilterConditionTreeNode copy() {
+        return this;
     }
 }
