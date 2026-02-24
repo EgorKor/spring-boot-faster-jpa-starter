@@ -4,7 +4,7 @@ import ru.korovin.packages.fasterjpa.testProject.model.User;
 import ru.korovin.packages.fasterjpa.annotations.AllowedOperations;
 import ru.korovin.packages.fasterjpa.annotations.ParamCountLimit;
 import ru.korovin.packages.fasterjpa.queryparam.Filter;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterOperation;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterOperation;
 
 import java.util.function.Supplier;
 

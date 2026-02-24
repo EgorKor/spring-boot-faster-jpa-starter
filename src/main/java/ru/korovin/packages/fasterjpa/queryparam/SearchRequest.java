@@ -6,9 +6,11 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.springframework.util.MultiValueMap;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Paginations;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterCondition;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterOperation;
-import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterOperation;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.FilterAndCondition;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.FilterCondition;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.FilterConditionTreeNode;
+import ru.korovin.packages.fasterjpa.queryparam.sorting_internal.SortingUnit;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -130,8 +132,13 @@ public class SearchRequest<F extends Filter<?>, S extends Sorting> {
                 }
             }
         }
-        filterObject.setConditions(filters);
-        customFilters.forEach(filterObject::_and);
+        filterObject.setFilterCondition(
+                new FilterAndCondition(filters.stream()
+                        .map(c -> (FilterConditionTreeNode) c)
+                        .toList()
+                )
+        );
+        customFilters.forEach(filterObject::andFilter);
         return filterObject;
     }
 

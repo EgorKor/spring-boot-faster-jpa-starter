@@ -16,7 +16,6 @@ import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.Pagination;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.Is;
 import ru.korovin.packages.fasterjpa.service.PageableResult;
 import ru.korovin.packages.fasterjpa.testProject.model.Tag;
 import ru.korovin.packages.fasterjpa.testProject.model.TestEntity;
@@ -79,9 +78,9 @@ public class JpaCrudServiceTests {
 
     @Test
     public void shouldThrowExceedLimitParametersCountExceptionForFilter() {
-        UserFilter filter = fb.and(UserFilter.class,
+        UserFilter filter = fb.and(
                 fb.equals("id", 1),
-                fb.equals("orders_name", "name"));
+                fb.equals("orders_name", "name")).toFilter(UserFilter.class);
         System.out.println(filter);
         filter.applyAllies();
         var exception = assertThrows(InvalidParameterException.class, filter::validateOperations);
@@ -183,9 +182,7 @@ public class JpaCrudServiceTests {
     public void shouldParseSizeFunctionForEquals() {
         assertEquals(
                 1, testEntityService.countByFilter(
-                        fb.and(
-                                fb.equals("nums.size()", "2")
-                        )
+                        fb.equals("nums.size()", "2").toFilter()
                 )
         );
     }

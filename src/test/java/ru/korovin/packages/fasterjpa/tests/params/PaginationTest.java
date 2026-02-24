@@ -7,7 +7,7 @@ import org.springframework.data.domain.Sort;
 import ru.korovin.packages.fasterjpa.queryparam.Pagination;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Paginations;
-import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
+import ru.korovin.packages.fasterjpa.queryparam.sorting_internal.SortingUnit;
 import ru.korovin.packages.fasterjpa.service.PageableResult;
 
 import static org.junit.jupiter.api.Assertions.*;

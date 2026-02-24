@@ -1,89 +1,154 @@
 package ru.korovin.packages.fasterjpa.tests.params;
 
-import ru.korovin.packages.fasterjpa.testProject.model.TestEntity;
-import ru.korovin.packages.fasterjpa.testProject.model.TestNestedEntity;
-import ru.korovin.packages.fasterjpa.queryparam.Filter;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
 import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
-import org.junit.jupiter.api.*;
+import jakarta.persistence.criteria.Root;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
+import ru.korovin.packages.fasterjpa.queryparam.Filter;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.FilterCondition;
+import ru.korovin.packages.fasterjpa.testProject.params.UserFilter;
 
-import java.util.List;
+import java.lang.reflect.Field;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 import static ru.korovin.packages.fasterjpa.queryparam.factories.Filters.fb;
-import static ru.korovin.packages.fasterjpa.queryparam.filterInternal.Is.TRUE;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@ExtendWith(MockitoExtension.class)
 public class FilterTest {
-    private static EntityManagerFactory emf;
-    private EntityManager em;
+    @Mock
+    private Root<TestEntity> root;
 
-    @BeforeAll
-    static void setup() {
+    @Mock
+    private CriteriaBuilder cb;
+
+    @Mock
+    private Path<Object> path;
+
+    @Mock
+    private Predicate predicate;
+
+    @Test
+    void testDefaultConstructor() {
+        Filter<TestEntity> filter = new Filter<>();
+        assertTrue(filter.isUnfiltered());
+        assertFalse(filter.isFiltered());
+    }
+
+    @Test
+    void testConstructorWithFilterList() {
+        Filter<TestEntity> filter = new Filter<>(
+                fb.and(
+                        fb.contains("name", "John"),
+                        fb.greater("age", 30)
+                )
+        );
+        assertEquals(2, filter.getConditionsCount());
+    }
+
+    @Test
+    void testIsFiltered() {
+        Filter<TestEntity> filter = new Filter<>(
+                fb.contains("name", "John"));
+        assertTrue(filter.isFiltered());
+    }
+
+    @Test
+    void testIsUnfiltered() {
+        Filter<TestEntity> filter = new Filter<>();
+        assertTrue(filter.isUnfiltered());
+    }
+
+    @Test
+    void testAnd() {
+        Filter<TestEntity> filter1 = new Filter<>(fb.contains("name", "John"));
+        Filter<TestEntity> filter2 = new Filter<>(fb.greater("age", 30));
+
+        Filter<TestEntity> result = filter1.andFilter(filter2);
+        assertEquals(2, result.getConditionsCount());
+    }
+
+    @Test
+    void testToPredicate_unfiltered() {
+        Filter<TestEntity> filter = new Filter<>();
+        Predicate result = filter.toPredicate(root, cb);
+        assertNull(result);
+    }
+
+    @Test
+    void testSoftDeleteFilter_booleanField() {
+        Field field = getFiltersByFieldNameField(TestEntity.class, "active");
+        Filter<TestEntity> filter = Filter.softDeleteFilter(field, true);
+
+        assertEquals(1, filter.getConditionsCount());
+    }
+
+    @Test
+    void testFilterIndex() {
+        UserFilter userFilter = fb.and(
+                fb.equals("orders_name", "something")
+        ).toFilter(UserFilter.class);
+        assertTrue(userFilter.containsFilterWithField("orders_name"));
+        FilterCondition op1 = userFilter.findFirstFilterByName("orders_name").get();
+        userFilter.applyAllies();
+        FilterCondition op2 = userFilter.findFirstFilterByName("orders_name").get();
+        assertSame(op1, op2);
+    }
+
+    @Test
+    void testFilterParamCountConstraint() {
+        UserFilter userFilter = fb.and(
+                fb.equals("orders_name", "something"),
+                fb.like("orders_name", "something")
+        ).toFilter(UserFilter.class);
+        var ex = assertThrows(InvalidParameterException.class, userFilter::validateFields);
+        System.out.println(ex.getMessage());
+    }
+
+    @Test
+    void testEmptyFilter() {
+        Filter<TestEntity> filter = Filter.empty();
+        assertTrue(filter.isUnfiltered());
+    }
+
+    @Test
+    void testEmptyFilterWithType() {
+        Filter<TestEntity> filter = Filter.empty(TestEntity.class);
+        assertTrue(filter.isUnfiltered());
+        assertEquals(TestEntity.class, filter.getEntityType());
+    }
+
+    @Test
+    void testFilterBuilder() {
+        Filter<TestEntity> filter = fb.and(
+                fb.equals("name", "John"),
+                fb.greater("age", "30")
+        ).toFilter();
+
+        assertEquals(2, filter.getConditionsCount());
+    }
+
+    private Field getFiltersByFieldNameField(Class<?> clazz, String fieldName) {
         try {
-            emf = Persistence.createEntityManagerFactory("test-pu");
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e;
+            return clazz.getDeclaredField(fieldName);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    @AfterAll
-    static void close() {
-        if (emf != null && emf.isOpen()) {
-            emf.close();
-        }
+    static class TestEntity {
+        String name;
+        int age;
+        boolean active;
+        NestedEntity nested;
     }
 
-    @BeforeEach
-    void init() {
-        em = emf.createEntityManager();
-        em.getTransaction().begin();
+    static class NestedEntity {
+        String property;
     }
-
-    @AfterEach
-    void tearDown() {
-        if (em.getTransaction().isActive()) {
-            em.getTransaction().rollback();
-        }
-        if (em.isOpen()) {
-            em.close();
-        }
-    }
-
-    @Test
-    void testFilterJPA1() {
-        Filter<TestEntity> filter = new Filter<>(TestEntity.class);
-        filter.setConditions(
-                /*List.of(
-                        "id:=:10", "name:like:some name", "isDeleted:is:true"
-                )*/
-                List.of(fb.equals("id", 10),
-                        fb.contains("name", "some name"),
-                        fb.is("isDeleted", TRUE))
-        );
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<TestEntity> cq = cb.createQuery(TestEntity.class);
-        Predicate predicate = filter.toPredicate(cq.from(TestEntity.class), cq, cb);
-        System.out.println(predicate);
-        assertEquals(predicate.getExpressions().size(), 3);
-    }
-
-    @Test
-    void testFilterJPA2() {
-        Filter<TestNestedEntity> filter = new Filter<>(TestNestedEntity.class);
-        filter.setConditions(
-                List.of(fb.equals("parent.id",10))
-        );
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<TestNestedEntity> cq = cb.createQuery(TestNestedEntity.class);
-        Predicate predicate = filter.toPredicate(cq.from(TestNestedEntity.class), cq, cb);
-        System.out.println(predicate);
-
-        assertEquals(predicate.getExpressions().size(), 1);
-    }
-
 }

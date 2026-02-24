@@ -19,7 +19,7 @@ import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.Pagination;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FieldExpressionCompiler;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FieldExpressionCompiler;
 import ru.korovin.packages.fasterjpa.service.CrudService;
 import ru.korovin.packages.fasterjpa.service.Joins;
 import ru.korovin.packages.fasterjpa.service.PageableResult;
@@ -839,7 +839,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
             return filter;
         }
         boolean isDeleted = false;
-        Filter<T> concantinatedFilter = filter._and(softDeleteFilter(softDeleteField, isDeleted));
+        Filter<T> concantinatedFilter = filter.andFilter(softDeleteFilter(softDeleteField, isDeleted));
         concantinatedFilter.setEntityType(entityType);
         return concantinatedFilter;
     }
@@ -860,7 +860,7 @@ public class JpaCrudService<T, ID> implements CrudService<T, ID> {
         return "Сущность "
                 + getEntityTypeName()
                 + " с условием: "
-                + filter.getConditions()
+                + filter
                 + " не найдена.";
     }
 

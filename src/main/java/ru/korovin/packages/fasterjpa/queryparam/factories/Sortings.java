@@ -1,7 +1,7 @@
 package ru.korovin.packages.fasterjpa.queryparam.factories;
 
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
-import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
+import ru.korovin.packages.fasterjpa.queryparam.sorting_internal.SortingUnit;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -1,9 +1,8 @@
 package ru.korovin.packages.fasterjpa.tests.params;
 
 import org.junit.jupiter.api.Test;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FieldExpressionCompiler;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.parsing.tokenizing.FilterToken;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.parsing.tokenizing.FilterTokenizer;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.parsing.tokenizing.FilterToken;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.parsing.tokenizing.FilterTokenizer;
 
 import java.util.List;
 

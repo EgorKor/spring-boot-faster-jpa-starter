@@ -3,7 +3,7 @@ package ru.korovin.packages.fasterjpa.tests.params;
 import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
-import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
+import ru.korovin.packages.fasterjpa.queryparam.sorting_internal.SortingUnit;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Path;

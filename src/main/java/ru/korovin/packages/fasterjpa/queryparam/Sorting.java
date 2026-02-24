@@ -4,8 +4,8 @@ import jakarta.persistence.criteria.*;
 import lombok.*;
 import ru.korovin.packages.fasterjpa.annotations.ParamCountLimit;
 import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
-import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingBuilder;
-import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
+import ru.korovin.packages.fasterjpa.queryparam.sorting_internal.SortingBuilder;
+import ru.korovin.packages.fasterjpa.queryparam.sorting_internal.SortingUnit;
 import org.springframework.data.domain.Sort;
 
 import java.lang.reflect.Field;
@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static ru.korovin.packages.fasterjpa.queryparam.filterInternal.FieldExpressionCompiler.getNestedPath;
+import static ru.korovin.packages.fasterjpa.queryparam.filter_internal.FieldExpressionCompiler.getNestedPath;
 
 /**
  * Параметр запроса для сортировки запрашиваемых ресурсов.

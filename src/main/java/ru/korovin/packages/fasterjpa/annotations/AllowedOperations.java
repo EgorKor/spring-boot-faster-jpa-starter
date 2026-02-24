@@ -1,6 +1,6 @@
 package ru.korovin.packages.fasterjpa.annotations;
 
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterOperation;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterOperation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

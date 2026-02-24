@@ -11,15 +11,15 @@ import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.Pagination;
 import ru.korovin.packages.fasterjpa.queryparam.SearchRequest;
 import ru.korovin.packages.fasterjpa.queryparam.Sorting;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterCondition;
-import ru.korovin.packages.fasterjpa.queryparam.sortingInternal.SortingUnit;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition.FilterCondition;
+import ru.korovin.packages.fasterjpa.queryparam.sorting_internal.SortingUnit;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static ru.korovin.packages.fasterjpa.queryparam.SearchRequest.*;
-import static ru.korovin.packages.fasterjpa.queryparam.filterInternal.FilterOperation.*;
+import static ru.korovin.packages.fasterjpa.queryparam.filter_internal.FilterOperation.*;
 
 public class SearchRequestTest {
 

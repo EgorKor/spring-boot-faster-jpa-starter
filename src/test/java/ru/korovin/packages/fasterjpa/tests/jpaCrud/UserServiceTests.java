@@ -18,7 +18,7 @@ import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Filters;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Paginations;
 import ru.korovin.packages.fasterjpa.queryparam.factories.Sortings;
-import ru.korovin.packages.fasterjpa.queryparam.filterInternal.ValueExpression;
+import ru.korovin.packages.fasterjpa.queryparam.filter_internal.ValueExpression;
 import ru.korovin.packages.fasterjpa.service.Joins;
 import ru.korovin.packages.fasterjpa.template.jpa.JpaEntityPropertyPatcher;
 import ru.korovin.packages.fasterjpa.testProject.model.User;
@@ -110,7 +110,7 @@ public class UserServiceTests {
     @Test
     public void softDeleteByFilter() {
         stats.setStatisticsEnabled(true);
-        userService.softDeleteByFilter(fb.and(fb.greater("id", "30")));
+        userService.softDeleteByFilter(fb.greater("id", "30").toFilter());
         var res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
         assertEquals(2, stats.getPrepareStatementCount());
         assertEquals(30, res.getData().size());
@@ -120,14 +120,10 @@ public class UserServiceTests {
     @Test
     public void recoverByFilter() {
         stats.setStatisticsEnabled(true);
-        userService.softDeleteByFilter(fb.and(
-                fb.lessOrEquals("id", "10")
-        ));
+        userService.softDeleteByFilter(fb.lessOrEquals("id", "10").toFilter());
         var res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
         assertEquals(res.getData().size(), 40);
-        userService.restoreByFilter(fb.and(
-                fb.lessOrEquals("id", "5")
-        ));
+        userService.restoreByFilter(fb.lessOrEquals("id", "5").toFilter());
         res = userService.getPage(Filter.empty(), Sortings.unsorted(), Paginations.unpaged());
         assertEquals(res.getData().size(), 45);
         assertEquals(4, stats.getPrepareStatementCount());
@@ -160,7 +156,7 @@ public class UserServiceTests {
     @Test
     public void testFilterWithPagination() {
         TestFilter testFilter = new TestFilter();
-        testFilter.getConditions().add(fb.contains("nameAlias", ""));
+        testFilter.andCondition(fb.contains("nameAlias", ""));
         testFilter.validateFields();
         testFilter.applyAllies();
         userService.getPage(testFilter, Sortings.unsorted(), Paginations.of(1, 10));
@@ -222,9 +218,7 @@ public class UserServiceTests {
 
     @Test
     public void testInHashSet(){
-        userService.getList(fb.and(
-                fb.notInCollection("id", new HashSet<>(Set.of(1,2,3)))
-        ));
+        userService.getList(fb.notInCollection("id", new HashSet<>(Set.of(1,2,3))).toFilter());
     }
 
     @Test
