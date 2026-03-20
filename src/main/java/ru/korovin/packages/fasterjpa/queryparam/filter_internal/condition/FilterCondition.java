@@ -1,6 +1,10 @@
 package ru.korovin.packages.fasterjpa.queryparam.filter_internal.condition;
 
 
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.criteria.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -21,10 +25,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Accessors(fluent = true)
 @Setter
@@ -145,6 +151,30 @@ public final class FilterCondition implements FilterConditionTreeNode {
                 return getFunctionPath(cb, selection, function).in(values);
             }
 
+            if (!isRelation(reflectionField)) {
+
+                Object[] values = inValues.stream()
+                        .map(inValue -> convertValue(inValue, elementType))
+                        .toArray();
+
+                List<Predicate> predicates = new ArrayList<>();
+
+                for (Object value : values) {
+
+                    // Используем array_position - возвращает позицию элемента или 0 если не найден
+                    Expression<Integer> position = cb.function(
+                            "array_position",
+                            Integer.class,
+                            selection,
+                            cb.literal(value)
+                    );
+
+                    predicates.add(cb.gt(position, 0));
+                }
+
+                return cb.and(predicates.toArray(new Predicate[0]));
+            }
+
             List<Predicate> predicates = new ArrayList<>();
             for (Object inValue : inValues) {
                 Object val = convertValue(inValue, elementType);
@@ -171,6 +201,13 @@ public final class FilterCondition implements FilterConditionTreeNode {
         return selection.getJavaType();
     }
 
+    public static boolean isRelation(Field field) {
+        return field.isAnnotationPresent(OneToOne.class) ||
+                field.isAnnotationPresent(OneToMany.class) ||
+                field.isAnnotationPresent(ManyToOne.class) ||
+                field.isAnnotationPresent(ManyToMany.class);
+    }
+
     public static Class<?> getCollectionElementType(Field field) {
         Type type = field.getGenericType();
         if (type instanceof ParameterizedType) {
@@ -189,10 +226,10 @@ public final class FilterCondition implements FilterConditionTreeNode {
             return value;
         }
 
-        if (value instanceof ValueExpression valueExpression) {
+        if (value instanceof ValueExpression(String expression)) {
             Root<?> root = rootContext.get();
             CriteriaBuilder cb = criteriaBuilderContext.get();
-            return FieldExpressionCompiler.compileToCriteria(valueExpression.expression(), cb, root);
+            return FieldExpressionCompiler.compileToCriteria(expression, cb, root);
         }
 
         // Конвертация между числовыми типами

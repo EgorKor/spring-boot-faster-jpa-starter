@@ -235,6 +235,24 @@ public class Filter<T> implements Specification<T> {
         return _this();
     }
 
+    @SneakyThrows
+    public <R extends Filter<?>> R toDerivedFilter(Class<R> derivedClass) {
+        R derivedFilter = (R) derivedClass.getDeclaredConstructor().newInstance();
+        derivedFilter.setEntityType(this.getEntityType());
+        derivedFilter.setFilterCondition(this.getFilterCondition());
+        derivedFilter.setDistinct(this.isDistinct());
+        derivedFilter.setPropertiesWhiteList(this.getPropertiesWhiteList());
+        derivedFilter.setFetchingProperties(this.getFetchingProperties());
+        derivedFilter.setQueryConfigurers(new ArrayList<>());
+        this.queryConfigurers.forEach(c -> {
+            derivedFilter.queryConfigurers.add(
+                    s -> c.accept((Root<T>) s)
+            );
+        });
+        derivedFilter.setConditionsWithNoMappedFields(this.getConditionsWithNoMappedFields());
+        return derivedFilter;
+    }
+
     /**
      * Метод объединения условия текущего фильтра
      * и другого условия через ИЛИ
