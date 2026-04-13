@@ -339,7 +339,7 @@ public class Filter<T> implements Specification<T> {
         queryConfigurers.add((root) -> {
             String[] attributes = fetchingProperty.split("\\.");
             FetchParent<?, ?> currentParent = root;
-            String mappingAttribute = "";
+            String mappingAttribute = attributes[0];
             for (String attribute : attributes) {
                 if (mappingAttribute.contains(".")) {
                     mappingAttribute += attribute;
@@ -360,11 +360,7 @@ public class Filter<T> implements Specification<T> {
      */
     public <R extends Filter<?>> R withFetchJoins(Joins joins) {
         this.fetchingProperties.addAll(joins.properties());
-        joins.properties().forEach(fetchingProperty -> {
-            queryConfigurers.add((root) -> {
-                withFetchJoin(fetchingProperty);
-            });
-        });
+        joins.properties().forEach(this::withFetchJoin);
         return _this();
     }
 
