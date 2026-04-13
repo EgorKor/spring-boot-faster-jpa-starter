@@ -61,6 +61,8 @@ public class Filter<T> implements Specification<T> {
      */
     protected Set<String> fetchingProperties = new HashSet<>();
 
+    protected Map<String, Fetch<?, ?>> fetches = new HashMap<>();
+
     /**
      * Условие фильтрации
      */
@@ -170,6 +172,7 @@ public class Filter<T> implements Specification<T> {
                                  CriteriaBuilder cb) {
         //конфигурация запроса
         queryConfigurers.forEach(c -> c.accept(root));
+        filterCondition.setFilter(this);
         return filterCondition.parsePredicate(root, null, cb, entityType);
     }
 
@@ -336,9 +339,14 @@ public class Filter<T> implements Specification<T> {
         queryConfigurers.add((root) -> {
             String[] attributes = fetchingProperty.split("\\.");
             FetchParent<?, ?> currentParent = root;
-
+            String mappingAttribute = "";
             for (String attribute : attributes) {
+                if (mappingAttribute.contains(".")) {
+                    mappingAttribute += attribute;
+                }
                 currentParent = currentParent.fetch(attribute, JoinType.LEFT);
+                fetches.put(mappingAttribute, (Fetch<?, ?>) currentParent);
+                mappingAttribute += ".";
             }
         });
         return _this();
@@ -354,15 +362,14 @@ public class Filter<T> implements Specification<T> {
         this.fetchingProperties.addAll(joins.properties());
         joins.properties().forEach(fetchingProperty -> {
             queryConfigurers.add((root) -> {
-                String[] attributes = fetchingProperty.split("\\.");
-                FetchParent<?, ?> currentParent = root;
-
-                for (String attribute : attributes) {
-                    currentParent = currentParent.fetch(attribute, JoinType.LEFT);
-                }
+                withFetchJoin(fetchingProperty);
             });
         });
         return _this();
+    }
+
+    public Fetch<?, ?> getFetchAttribute(String attribute) {
+        return fetches.get(attribute);
     }
 
     //endregion

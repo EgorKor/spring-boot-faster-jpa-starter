@@ -24,6 +24,8 @@ import java.util.List;
 public sealed interface FilterConditionTreeNode permits FilterAndCondition, FilterCondition, FilterEmptyCondition, FilterNotCondition, FilterOrCondition {
     Predicate parsePredicate(Root<?> root, CriteriaQuery<?> criteriaQuery, CriteriaBuilder criteriaBuilder, Class<?> entityType);
 
+    void setFilter(Filter<?> filter);
+
     default <T> T visitWith(FilterConditionTreeNodeVisitor<T> visitor) {
         return switch (this) {
             case FilterAndCondition andCondition -> visitor.visit(andCondition);

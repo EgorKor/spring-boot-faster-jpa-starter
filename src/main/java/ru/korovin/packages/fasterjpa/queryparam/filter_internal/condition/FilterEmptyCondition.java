@@ -4,6 +4,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import ru.korovin.packages.fasterjpa.queryparam.Filter;
 
 public final class FilterEmptyCondition implements FilterConditionTreeNode {
 
@@ -13,6 +14,11 @@ public final class FilterEmptyCondition implements FilterConditionTreeNode {
                 criteriaBuilder.literal(1),
                 criteriaBuilder.literal(1)
         );
+    }
+
+    @Override
+    public void setFilter(Filter<?> filter) {
+        //do nothing
     }
 
     @Override

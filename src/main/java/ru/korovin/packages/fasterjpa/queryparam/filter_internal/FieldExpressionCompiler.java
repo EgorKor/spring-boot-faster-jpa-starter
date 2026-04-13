@@ -4,6 +4,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
+import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.parsing.ast.ASTNode;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.parsing.ast.FieldExpressionParser;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.parsing.tokenizing.FilterToken;
@@ -15,6 +16,7 @@ import java.util.List;
 public class FieldExpressionCompiler {
     public static Expression<?> compileToCriteria(
             String fieldExpression,
+            Filter<?> filter,
             CriteriaBuilder cb,
             Root<?> root) {
 
@@ -31,15 +33,15 @@ public class FieldExpressionCompiler {
         List<FilterToken> tokens = tokenizer.tokenize(fieldExpression);
 
         FilterValidationResult validation = tokenizer.validate(tokens);
+        List<String> errors = validation.errors();
         if (!validation.isValid()) {
             throw new IllegalArgumentException("Invalid expression: " +
-                    String.join(", ", validation.errors()));
+                    String.join(", ", errors));
         }
-
         FieldExpressionParser parser = new FieldExpressionParser(tokens);
         ASTNode ast = parser.parse();
 
-        CriteriaExpressionBuilder builder = new CriteriaExpressionBuilder(cb, root);
+        CriteriaExpressionBuilder builder = new CriteriaExpressionBuilder(cb, root, filter);
         return ast.accept(builder);
     }
 

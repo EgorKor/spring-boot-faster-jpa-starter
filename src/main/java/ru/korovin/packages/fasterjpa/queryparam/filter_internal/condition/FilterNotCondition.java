@@ -6,6 +6,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import ru.korovin.packages.fasterjpa.queryparam.Filter;
 
 @Getter
 @AllArgsConstructor
@@ -20,6 +21,11 @@ public final class FilterNotCondition implements FilterConditionTreeNode {
         return criteriaBuilder.not(
                 node.parsePredicate(root, criteriaQuery, criteriaBuilder, entityType)
         );
+    }
+
+    @Override
+    public void setFilter(Filter<?> filter) {
+        this.node.setFilter(filter);
     }
 
     @Override

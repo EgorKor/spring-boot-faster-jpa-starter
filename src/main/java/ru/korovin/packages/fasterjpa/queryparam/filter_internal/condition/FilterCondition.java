@@ -12,6 +12,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import ru.korovin.packages.fasterjpa.exception.InvalidParameterException;
+import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.*;
 import ru.korovin.packages.fasterjpa.queryparam.utils.FieldTypeUtils;
 
@@ -25,12 +26,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Accessors(fluent = true)
 @Setter
@@ -46,6 +45,7 @@ public final class FilterCondition implements FilterConditionTreeNode {
     private static ThreadLocal<CriteriaBuilder> criteriaBuilderContext = new ThreadLocal<>();
     private static ThreadLocal<Class<?>> entityTypeContext = new ThreadLocal<>();
 
+    private Filter<?> filter;
     private String property;
     private FilterOperation operation;
     private Object value;
@@ -77,7 +77,7 @@ public final class FilterCondition implements FilterConditionTreeNode {
                 property = property.substring(0, property.lastIndexOf(functionStr) - 1);
             }
 
-            Expression<?> selection = FieldExpressionCompiler.compileToCriteria(property, cb, root);
+            Expression<?> selection = FieldExpressionCompiler.compileToCriteria(property, filter, cb, root);
             Field reflectionField = FieldTypeUtils.getField(entityType, property);
 
             return switch (operation) {
@@ -101,6 +101,11 @@ public final class FilterCondition implements FilterConditionTreeNode {
             rootContext.remove();
             criteriaBuilderContext.remove();
         }
+    }
+
+    @Override
+    public void setFilter(Filter<?> filter) {
+        this.filter = filter;
     }
 
     @Override
@@ -229,7 +234,7 @@ public final class FilterCondition implements FilterConditionTreeNode {
         if (value instanceof ValueExpression(String expression)) {
             Root<?> root = rootContext.get();
             CriteriaBuilder cb = criteriaBuilderContext.get();
-            return FieldExpressionCompiler.compileToCriteria(expression, cb, root);
+            return FieldExpressionCompiler.compileToCriteria(expression, filter, cb, root);
         }
 
         // Конвертация между числовыми типами

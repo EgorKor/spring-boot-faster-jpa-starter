@@ -1,8 +1,7 @@
 package ru.korovin.packages.fasterjpa.queryparam.filter_internal.parsing.visitor;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.*;
+import ru.korovin.packages.fasterjpa.queryparam.Filter;
 import ru.korovin.packages.fasterjpa.queryparam.filter_internal.parsing.ast.*;
 
 import java.util.List;
@@ -14,14 +13,16 @@ import static ru.korovin.packages.fasterjpa.queryparam.filter_internal.FieldExpr
 public class CriteriaExpressionBuilder implements ASTVisitor<Expression<?>> {
     private final CriteriaBuilder cb;
     private final Root<?> root;
+    private final Filter<?> filter;
 
     // Паттерны из вашего текущего кода (предположительные)
     private static final Pattern TO_CHAR_FUNCTION_PATTERN =
             Pattern.compile("to_char\\(([^,]+),\\s*'([^']+)'\\)", Pattern.CASE_INSENSITIVE);
 
-    public CriteriaExpressionBuilder(CriteriaBuilder cb, Root<?> root) {
+    public CriteriaExpressionBuilder(CriteriaBuilder cb, Root<?> root, Filter<?> filter) {
         this.cb = cb;
         this.root = root;
+        this.filter = filter;
     }
 
     @Override
@@ -216,7 +217,7 @@ public class CriteriaExpressionBuilder implements ASTVisitor<Expression<?>> {
      */
     private Expression<String> convertToString(CriteriaBuilder cb, Expression<?> expr) {
         // Если выражение уже строковое, возвращаем как есть
-        if (expr.getJavaType().equals(String.class)) {
+        if (expr.getJavaType() != null && expr.getJavaType().equals(String.class)) {
             return (Expression<String>) expr;
         }
 
@@ -226,7 +227,43 @@ public class CriteriaExpressionBuilder implements ASTVisitor<Expression<?>> {
 
     @Override
     public Expression<?> visit(FieldPath node) {
+        String formattedPath = formatPathToSearchInFetches(node.path);
+        Fetch<?, ?> fetch = filter.getFetchAttribute(formattedPath);
+        if (fetch != null) {
+            Join<?, ?> join = (Join<?, ?>) fetch;
+            String lastAttributeForJoin = getLastAttributeForJoin(node.path);
+            return join.get(lastAttributeForJoin);
+        }
+
         return getNestedPath(root, node.path);
+    }
+
+    /**
+     * Метод извлечения последней части пути для того, чтобы
+     * забрать этот аттрибут у Join через метод get
+     * Пример:
+     * fetch -> user.profile
+     * filter -> user.profile.id
+     * получается нам нужно получить
+     * ((fetch)user.profile).get(id)
+     */
+    private String getLastAttributeForJoin(String path) {
+        return path.substring(path.lastIndexOf(".") + 1);
+    }
+
+    /**
+     * Подготовка пути к поиску в карте fetches
+     * В чём смысл метода:
+     * Допустим в fetches хранится fetch для пути 'user.profile'
+     * В данный момент мы обрабатываем фильтр для 'user.profile.id',
+     * значит нам нужно убрать последнюю часть пути '.id' для того чтобы
+     * мы смогли найти в карте 'user.profile'
+     */
+    private String formatPathToSearchInFetches(String path) {
+        if (!path.contains(".")) {
+            return path;
+        }
+        return path.substring(0, path.lastIndexOf("."));
     }
 
     @Override

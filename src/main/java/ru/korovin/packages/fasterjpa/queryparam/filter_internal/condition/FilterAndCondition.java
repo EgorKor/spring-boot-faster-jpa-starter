@@ -5,6 +5,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import lombok.Getter;
+import ru.korovin.packages.fasterjpa.queryparam.Filter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,13 @@ public final class FilterAndCondition implements FilterConditionTreeNode {
                         .map(n -> n.parsePredicate(root, criteriaQuery, criteriaBuilder, entityType))
                         .toArray(Predicate[]::new)
         );
+    }
+
+    @Override
+    public void setFilter(Filter<?> filter) {
+        this.nodes.forEach(node -> {
+            node.setFilter(filter);
+        });
     }
 
     @Override
